@@ -461,6 +461,20 @@ struct ReduceOpVariantsPass
       if (op->hasTrait<Torch::OpTrait::IsTrailingUnderscoreInplaceVariant>()) {
         return false;
       }
+      if (isa<OperatorOp>(op)) {
+        auto hasValueSemantics = [](Type t) {
+          // TODO: Make this an allowlist based on a closed torch dialect
+          // type system.
+          if (auto tensorType = dyn_cast<NonValueTensorType>(t)) {
+            return false;
+          }
+          return true;
+        };
+        if (llvm::all_of(op->getOperandTypes(), hasValueSemantics) &&
+            llvm::all_of(op->getResultTypes(), hasValueSemantics)) {
+          return true;
+        }
+      }
 
       if (isa<OperatorOp>(op) && isSpecializedOperation(cast<OperatorOp>(op)))
         return false;
