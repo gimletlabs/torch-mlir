@@ -234,7 +234,7 @@ private:
   MlirOperation func_op_;
   MlirBlock body_block_;
   MlirLocation default_loc_;
-  std::unordered_map<std::string_view, MlirValue> nv_map_;
+  std::unordered_map<std::string, MlirValue> nv_map_;
 };
 
 } // namespace torch_mlir_onnx

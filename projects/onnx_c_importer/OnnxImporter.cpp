@@ -553,7 +553,7 @@ Status NodeImporter::DefineFunction(std::optional<std::string> name) {
 
   // Map the block args to names and store for evaluation.
   for (int i = 0, e = graph_info_.inputs().size(); i < e; ++i) {
-    std::string_view name = graph_info_.inputs()[i]->name();
+    const auto &name = graph_info_.inputs()[i]->name();
     MlirValue value = mlirBlockGetArgument(body_block_, i);
     nv_map_[name] = value;
   }
@@ -569,7 +569,7 @@ void NodeImporter::PopulateGraphAttrs(MlirOperation container_op) {
   std::unordered_map<std::string_view, MlirAttribute> opset_versions;
   // Determine model level opset versions.
   for (const onnx::OperatorSetIdProto &opset_import : m.opset_import()) {
-    if (opset_import.has_domain()) {
+    if (opset_import.has_domain() && opset_import.domain() != "" && opset_import.domain() != "ai.onnx") {
       opset_versions[opset_import.domain()] =
           mlirIntegerAttrGet(i64_type, opset_import.version());
     } else {
@@ -626,7 +626,7 @@ Status NodeImporter::ImportAll() {
   // properly formed.
   std::vector<MlirValue> output_values;
   for (const auto *output : graph_info_.outputs()) {
-    std::string_view name = output->name();
+    const auto& name = output->name();
     auto found_it = nv_map_.find(name);
     if (found_it == nv_map_.end()) {
       std::string msg = "Non topologically produced ONNX graph output '";
@@ -685,7 +685,7 @@ Status NodeImporter::ImportGeneralNode(const onnx::NodeProto &node) {
 
   // Map inputs to values.
   std::vector<MlirValue> input_values;
-  for (auto &input_name : node.input()) {
+  for (const auto &input_name : node.input()) {
     auto found_it = nv_map_.find(input_name);
     if (found_it == nv_map_.end()) {
       std::string msg = "Non topologically produced ONNX node input '";
