@@ -1,0 +1,20 @@
+package(
+    default_visibility = [
+        "//visibility:public",
+    ],
+)
+
+cc_library(
+    name = "OnnxImporter",
+    srcs = [
+        "OnnxImporter.cpp",
+    ],
+    hdrs = [
+        "OnnxImporter.h",
+    ],
+    include_prefix = "torch_mlir/onnx_c_importer",
+    deps = [
+        "@llvm-project//mlir:CAPIIR",
+        "@com_github_onnx_onnx//:onnx",
+    ],
+)
