@@ -204,6 +204,8 @@ def compile(
     verbose: bool = False,
     use_make_fx: bool = False,
     enable_ir_printing: bool = False,
+    pre_dispatch: bool = False,
+    decompose: bool = True,
 ):
     """Convert a PyTorch model to MLIR.
 
@@ -269,7 +271,7 @@ def compile(
         args = example_args._get_for_tracing(
             use_tracing=True, ignore_traced_shapes=True
         )["forward"]
-        model = make_fx(model, decomposition_table=_get_decomposition_table())(*args)
+        model = make_fx(model, pre_dispatch=pre_dispatch, decomposition_table=_get_decomposition_table())(*args)
 
     # For FX-based models, automatically strip overloads.
     if isinstance(model, torch.fx.GraphModule):
@@ -349,6 +351,8 @@ PyTorch TorchScript module -> torch-mlir Object Graph IR import failed with:
         + ",".join(backend_legal_ops)
         + " extra-library="
         + extra_library_file_name
+        + " decompose-complex-ops="
+        + str(decompose)
         + "}"
     )
     run_pipeline_with_repro_report(
