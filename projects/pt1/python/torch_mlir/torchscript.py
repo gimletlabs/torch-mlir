@@ -174,6 +174,8 @@ def compile(
     extra_library: Iterable[Callable] = [],
     verbose: bool = False,
     enable_ir_printing: bool = False,
+    pre_dispatch: bool = False,
+    decompose: bool = True,
 ):
     """Convert a PyTorch model to MLIR.
 
@@ -304,6 +306,8 @@ PyTorch TorchScript module -> torch-mlir Object Graph IR import failed with:
         + ",".join(backend_legal_ops)
         + " extra-library="
         + extra_library_file_name
+        + " decompose-complex-ops="
+        + str(decompose)
         + "}"
     )
     run_pipeline_with_repro_report(
