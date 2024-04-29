@@ -34,6 +34,8 @@ include(CMakeDependentOption)
 option(TORCH_MLIR_ENABLE_WERROR_FLAG "Enable `-Werror` flag on supported directories, treat error as warning" OFF)
 option(TORCH_MLIR_USE_INSTALLED_PYTORCH "If depending on PyTorch use it as installed in the current Python environment" ON)
 
+set(TORCH_CUDA_ARCH_LIST "8.0 8.6 8.9 9.0")
+
 option(TORCH_MLIR_ENABLE_REFBACKEND "Enable reference backend" ON)
 if(TORCH_MLIR_ENABLE_REFBACKEND)
   add_definitions(-DTORCH_MLIR_ENABLE_REFBACKEND)
