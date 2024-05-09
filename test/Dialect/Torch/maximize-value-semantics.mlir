@@ -1,4 +1,4 @@
-// RUN: torch-mlir-opt -split-input-file -allow-unregistered-dialect %s -torch-maximize-value-semantics | FileCheck %s
+// RUN: torch-mlir-opt -split-input-file -allow-unregistered-dialect %s -torch-maximize-value-semantics -mlir-disable-threading -debug-only=greedy-rewriter | FileCheck %s
 
 // CHECK-LABEL:   func.func @torch.copy.tensor$basic(
 // CHECK-SAME:                                  %[[ARG0:.*]]: !torch.vtensor) -> (!torch.vtensor, !torch.vtensor) {
@@ -108,10 +108,33 @@ func.func @control_flow$no_overwrites(%arg0: !torch.vtensor, %arg1: !torch.vtens
   return %new_tensor : !torch.vtensor
 }
 
-// We don't yet handle nontrivial cases involving control flow.
-// CHECK-LABEL:   func.func @unimplemented_control_flow(
-// CHECK:           torch.copy.to_vtensor
-func.func @unimplemented_control_flow(%arg0: !torch.vtensor, %arg1: !torch.vtensor, %cond: !torch.bool) -> (!torch.vtensor, !torch.vtensor) {
+// CHECK-LABEL:   func.func @control_flow$overwrites(
+// CHECK-SAME:                                          %[[ARG0:.*]]: !torch.vtensor, %[[ARG1:.*]]: !torch.vtensor, %[[COND:.*]]: !torch.bool) -> !torch.vtensor {
+// CHECK:             torch.prim.If.yield %[[ARG1]] : !torch.vtensor
+// CHECK:             torch.prim.If.yield %[[ARG0]] : !torch.vtensor
+func.func @control_flow$overwrites(%arg0: !torch.vtensor, %arg1: !torch.vtensor, %cond: !torch.bool) -> (!torch.vtensor) {
+  %tensor0 = torch.copy.to_tensor %arg0 : !torch.tensor
+  %tensor1 = torch.copy.to_tensor %arg1 : !torch.tensor
+  %new_tensor = torch.prim.If %cond -> (!torch.tensor) {
+    torch.overwrite.tensor.contents %arg1 overwrites %tensor0 : !torch.vtensor, !torch.tensor
+    torch.prim.If.yield %tensor0 : !torch.tensor
+  } else {
+    torch.overwrite.tensor.contents %arg0 overwrites %tensor1 : !torch.vtensor, !torch.tensor
+    torch.prim.If.yield %tensor1 : !torch.tensor
+  }
+  %vnew_tensor = torch.copy.to_vtensor %new_tensor : !torch.vtensor
+  return %vnew_tensor : !torch.vtensor
+}
+
+// CHECK-LABEL:   func.func @control_flow$overwrite_in_one_branch(
+// CHECK-SAME:                                          %[[ARG0:.*]]: !torch.vtensor, %[[ARG1:.*]]: !torch.vtensor, %[[COND:.*]]: !torch.bool) -> (!torch.vtensor, !torch.vtensor) {
+// CHECK:           %[[IFRES:.*]] = torch.prim.If %[[COND]] -> (!torch.vtensor) {
+// CHECK:             torch.prim.If.yield %[[ARG1]] : !torch.vtensor
+// CHECK:           } else {
+// CHECK:             torch.prim.If.yield %[[ARG0]] : !torch.vtensor
+// CHECK:           }
+// CHECK:           return %[[ARG0]], %[[IFRES]] : !torch.vtensor, !torch.vtensor
+func.func @control_flow$overwrite_in_one_branch(%arg0: !torch.vtensor, %arg1: !torch.vtensor, %cond: !torch.bool) -> (!torch.vtensor, !torch.vtensor) {
   %tensor = torch.copy.to_tensor %arg0 : !torch.tensor
   %equal_to_arg0 = torch.copy.to_vtensor %tensor : !torch.vtensor
   torch.prim.If %cond -> () {
@@ -122,6 +145,32 @@ func.func @unimplemented_control_flow(%arg0: !torch.vtensor, %arg1: !torch.vtens
   }
   %equal_to_arg1 = torch.copy.to_vtensor %tensor : !torch.vtensor
   return %equal_to_arg0, %equal_to_arg1 : !torch.vtensor, !torch.vtensor
+}
+
+// CHECK-LABEL:   func.func @control_flow$non_tensor_result(
+// CHECK-SAME:                                          %[[ARG0:.*]]: !torch.vtensor, %[[ARG1:.*]]: !torch.vtensor, %[[COND:.*]]: !torch.bool) -> (!torch.bool, !torch.vtensor) {
+// CHECK:           %[[IFRES:.*]]:2 = torch.prim.If %[[COND]] -> (!torch.bool, !torch.vtensor) {
+// CHECK:             %[[BOOL:.*]] = torch.aten.Bool.Tensor %[[ARG1]] : !torch.vtensor -> !torch.bool
+// CHECK:             torch.prim.If.yield %[[BOOL]], %[[ARG1]] : !torch.bool, !torch.vtensor
+// CHECK:           } else {
+// CHECK:             %[[BOOL:.*]] = torch.aten.Bool.Tensor %[[ARG0]] : !torch.vtensor -> !torch.bool
+// CHECK:             torch.prim.If.yield %[[BOOL]], %[[ARG0]] : !torch.bool, !torch.vtensor
+// CHECK:           }
+// CHECK:           return %[[IFRES]]#0, %[[IFRES]]#1 : !torch.bool, !torch.vtensor
+func.func @control_flow$non_tensor_result(%arg0: !torch.vtensor, %arg1: !torch.vtensor, %cond: !torch.bool) -> (!torch.bool, !torch.vtensor) {
+  %tensor = torch.copy.to_tensor %arg0 : !torch.tensor
+  %tensor_bool = torch.prim.If %cond -> (!torch.bool) {
+    torch.overwrite.tensor.contents %arg1 overwrites %tensor : !torch.vtensor, !torch.tensor
+    %vtensor = torch.copy.to_vtensor %tensor : !torch.vtensor
+    %bool = torch.aten.Bool.Tensor %vtensor : !torch.vtensor -> !torch.bool
+    torch.prim.If.yield %bool : !torch.bool
+  } else {
+    %vtensor = torch.copy.to_vtensor %tensor : !torch.vtensor
+    %bool = torch.aten.Bool.Tensor %vtensor : !torch.vtensor -> !torch.bool
+    torch.prim.If.yield %bool : !torch.bool
+  }
+  %equal_to_arg1 = torch.copy.to_vtensor %tensor : !torch.vtensor
+  return %tensor_bool, %equal_to_arg1  : !torch.bool, !torch.vtensor
 }
 
 // CHECK-LABEL:   func.func @non_value_tensor_returned(
