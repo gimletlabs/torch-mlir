@@ -12,6 +12,8 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Dominance.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "torch-mlir/Dialect/Torch/IR/TorchOps.h"
@@ -362,6 +364,253 @@ public:
     return success();
   }
 };
+
+class ConvertControlFlowToValueSemantics : public OpRewritePattern<PrimIfOp> {
+  using NonValueTensorSet = llvm::DenseSet<TypedValue<NonValueTensorType>>;
+
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  struct NonValueControlFlowDeps {
+    NonValueTensorSet thenDeps;
+    NonValueTensorSet elseDeps;
+    NonValueTensorSet allDeps;
+  };
+
+  LogicalResult gatherNonValueDependenciesOfRegion(
+      PrimIfOp ifOp, const DominanceInfo &dom_info, Region &region,
+      NonValueTensorSet &deps) const {
+    for (auto &op : region.getOps()) {
+      for (auto operand : op.getOperands()) {
+        if (!llvm::isa<NonValueTensorType>(operand.getType())) {
+          continue;
+        }
+        if (!dom_info.properlyDominates(operand, ifOp)) {
+          continue;
+        }
+        deps.insert(operand.cast<TypedValue<NonValueTensorType>>());
+      }
+    }
+    return success();
+  }
+
+  LogicalResult
+  gatherNonValueDependencies(PrimIfOp op, NonValueControlFlowDeps &deps) const {
+    DominanceInfo dom_info(op);
+
+    if (gatherNonValueDependenciesOfRegion(op, dom_info, op.getThenRegion(),
+                                           deps.thenDeps)
+            .failed()) {
+      return failure();
+    }
+    if (gatherNonValueDependenciesOfRegion(op, dom_info, op.getElseRegion(),
+                                           deps.elseDeps)
+            .failed()) {
+      return failure();
+    }
+    deps.allDeps.insert(deps.thenDeps.begin(), deps.thenDeps.end());
+    deps.allDeps.insert(deps.elseDeps.begin(), deps.elseDeps.end());
+    return success();
+  }
+
+  void addYieldWithDeps(PatternRewriter &rewriter, Location loc, Block &block,
+                        IRMapping &map,
+                        const llvm::SmallVector<TypedValue<NonValueTensorType>>
+                            &depsToAdd) const {
+    rewriter.setInsertionPointToEnd(&block);
+    llvm::SmallVector<Value> operands;
+    for (auto dep : depsToAdd) {
+      auto valTensor = copyTensorToType(
+          rewriter, loc, dep.getType().getWithValueSemantics(), dep);
+      operands.push_back(valTensor);
+    }
+    rewriter.create<PrimIfYieldOp>(loc, operands);
+  }
+
+  void addNewDepsToYield(PatternRewriter &rewriter, Location loc, Block &block,
+                         IRMapping &map,
+                         const llvm::SmallVector<TypedValue<NonValueTensorType>>
+                             &depsToAdd) const {
+    auto yield = block.getTerminator();
+    if (!llvm::isa<PrimIfYieldOp>(yield)) {
+      return addYieldWithDeps(rewriter, loc, block, map, depsToAdd);
+    }
+    rewriter.setInsertionPoint(yield);
+    llvm::SmallVector<Value> newOperands;
+    for (auto operand : yield->getOperands()) {
+      auto nonValType = llvm::dyn_cast<NonValueTensorType>(operand.getType());
+      if (!nonValType) {
+        newOperands.push_back(operand);
+        continue;
+      }
+      auto valTensor = copyTensorToType(
+          rewriter, loc, nonValType.getWithValueSemantics(), operand);
+      newOperands.push_back(valTensor);
+    }
+    for (auto dep : depsToAdd) {
+      auto valTensor =
+          copyTensorToType(rewriter, loc, dep.getType().getWithValueSemantics(),
+                           map.getValueMap().at(dep));
+      newOperands.push_back(valTensor);
+    }
+    rewriter.replaceOpWithNewOp<PrimIfYieldOp>(yield, newOperands);
+  }
+
+  void mapYieldForPreexistingResults(PatternRewriter &rewriter, Location loc,
+                                     Block &block, IRMapping &map) const {
+    auto yield = block.getTerminator();
+    if (!llvm::isa<PrimIfYieldOp>(yield)) {
+      // If there's no yield op terminator, then nothing to do.
+      return;
+    }
+    // Convert any non-value tensors that were already results of the old If op,
+    // into value tensors before yielding.
+    rewriter.setInsertionPoint(yield);
+    for (auto operand : yield->getOperands()) {
+      auto nonValType = llvm::dyn_cast<NonValueTensorType>(operand.getType());
+      if (!nonValType) {
+        continue;
+      }
+      auto valTensor = copyTensorToType(
+          rewriter, loc, nonValType.getWithValueSemantics(), operand);
+      map.map(operand, valTensor);
+    }
+  }
+
+  LogicalResult matchAndRewrite(PrimIfOp ifOp,
+                                PatternRewriter &rewriter) const override {
+    // Find all of the NonValueTensor dependencies in either branch of the If
+    // op.
+    NonValueControlFlowDeps nonValueDeps;
+    if (gatherNonValueDependencies(ifOp, nonValueDeps).failed()) {
+      return failure();
+    }
+    if (nonValueDeps.allDeps.empty()) {
+      return rewriter.notifyMatchFailure(
+          ifOp, "no NonValueTensor dependencies to control flow");
+    }
+
+    llvm::DenseMap<size_t, BaseTensorType> indexToOriginalType;
+    NonValueTensorSet preexistingNonValTensors;
+    llvm::SmallVector<Type> newResultTypes;
+    // Keep all the original results of the If op. If any of these results are
+    // NonValueTensors we convert them to value tensors.
+    for (auto result : ifOp.getResults()) {
+      auto type = result.getType();
+      if (auto nonValType = llvm::dyn_cast<NonValueTensorType>(type)) {
+        preexistingNonValTensors.insert(
+            result.cast<TypedValue<NonValueTensorType>>());
+        type = nonValType.getWithValueSemantics();
+        indexToOriginalType.try_emplace(newResultTypes.size(), nonValType);
+      }
+      newResultTypes.push_back(type);
+    }
+    llvm::SmallVector<TypedValue<NonValueTensorType>> depsToYield;
+    // Find the dependencies that have uses after the if op. These need to be
+    // converted to value-tensor results of the If op.
+    for (auto dep : nonValueDeps.allDeps) {
+      if (preexistingNonValTensors.contains(dep)) {
+        // Ignore deps that were already a result of the if op.
+        continue;
+      }
+      for (auto user : dep.getUsers()) {
+        if (user->getBlock() != ifOp->getBlock() ||
+            !ifOp->isBeforeInBlock(user)) {
+          continue;
+        }
+        depsToYield.push_back(dep);
+        indexToOriginalType.try_emplace(newResultTypes.size(), dep.getType());
+        newResultTypes.push_back(dep.getType().getWithValueSemantics());
+        break;
+      }
+    }
+    auto newIfOp = rewriter.create<PrimIfOp>(ifOp.getLoc(), newResultTypes,
+                                             ifOp.getCondition());
+
+    // Clone the regions using the created mapping from non-value to value
+    // tensors.
+    rewriter.cloneRegionBefore(ifOp.getThenRegion(), newIfOp.getThenRegion(),
+                               newIfOp.getThenRegion().end());
+    rewriter.cloneRegionBefore(ifOp.getElseRegion(), newIfOp.getElseRegion(),
+                               newIfOp.getElseRegion().end());
+
+    auto &newThen = newIfOp.getThenRegion().front();
+    auto &newElse = newIfOp.getElseRegion().front();
+    // Keep track of mapping of control flow dependencies to their new values
+    // inside the regions.
+    IRMapping thenMap;
+    IRMapping elseMap;
+    for (auto dep : nonValueDeps.allDeps) {
+      rewriter.setInsertionPoint(newIfOp);
+      auto valTensor =
+          copyTensorToType(rewriter, newIfOp.getLoc(),
+                           dep.getType().getWithValueSemantics(), dep);
+
+      // Convert the value tensor back into a non-value tensor inside the Then
+      // region.
+      rewriter.setInsertionPointToStart(&newThen);
+      auto thenNonValTensor = copyTensorToType(rewriter, newIfOp.getLoc(),
+                                               dep.getType(), valTensor);
+      rewriter.replaceUsesWithIf(dep, thenNonValTensor,
+                                 [&](const OpOperand &operand) {
+                                   return newThen.getParent()->isAncestor(
+                                       operand.getOwner()->getParentRegion());
+                                 });
+      thenMap.map(dep, thenNonValTensor);
+
+      // Convert the value tensor back into a non-value tensor inside the Else
+      // region.
+      rewriter.setInsertionPointToStart(&newElse);
+      auto elseNonValTensor = copyTensorToType(rewriter, newIfOp.getLoc(),
+                                               dep.getType(), valTensor);
+      rewriter.replaceUsesWithIf(dep, elseNonValTensor,
+                                 [&](const OpOperand &operand) {
+                                   return newElse.getParent()->isAncestor(
+                                       operand.getOwner()->getParentRegion());
+                                 });
+      elseMap.map(dep, elseNonValTensor);
+    }
+
+    addNewDepsToYield(rewriter, newIfOp.getLoc(), newThen, thenMap,
+                      depsToYield);
+    addNewDepsToYield(rewriter, newIfOp.getLoc(), newElse, elseMap,
+                      depsToYield);
+
+    // Convert results that were changed to value tensors back to non value
+    // tensors.
+    rewriter.setInsertionPointAfter(newIfOp);
+    llvm::SmallVector<Value> resultReplacements;
+    for (auto result : llvm::enumerate(newIfOp.getResults())) {
+      if (!indexToOriginalType.contains(result.index())) {
+        resultReplacements.push_back(result.value());
+        continue;
+      }
+      auto originalType = indexToOriginalType.at(result.index());
+      auto replacementVal = copyTensorToType(rewriter, newIfOp.getLoc(),
+                                             originalType, result.value());
+      resultReplacements.push_back(replacementVal);
+    }
+
+    // Replace all original If results.
+    for (size_t i = 0; i < ifOp.getResults().size(); ++i) {
+      rewriter.replaceAllUsesWith(ifOp.getResult(i), resultReplacements[i]);
+    }
+    // Replace uses of non-value tensor dependencies after the If op, with
+    // results from the if op.
+    for (size_t i = 0; i < resultReplacements.size() - ifOp.getResults().size();
+         ++i) {
+      rewriter.replaceUsesWithIf(
+          depsToYield[i], resultReplacements[i + ifOp.getResults().size()], [&](const OpOperand &use) {
+            auto user = use.getOwner();
+            return user->getBlock() == newIfOp->getBlock() &&
+                   newIfOp->isBeforeInBlock(user);
+          });
+    }
+    rewriter.eraseOp(ifOp);
+
+    return success();
+  }
+};
 } // namespace
 
 namespace {
@@ -372,8 +621,10 @@ class MaximizeValueSemanticsPass
     auto func = getOperation();
 
     RewritePatternSet patterns(context);
-    patterns.insert<AbstractlyInterpretCopyToNonValueTensorOpUsersWithinABlock,
-                    RewriteViewLikeSubgraph>(context);
+    patterns
+        .insert<AbstractlyInterpretCopyToNonValueTensorOpUsersWithinABlock,
+                RewriteViewLikeSubgraph, ConvertControlFlowToValueSemantics>(
+            context);
     (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
   }
 };
