@@ -136,6 +136,8 @@ createSimplifyDtypeCalculationsPass();
 std::unique_ptr<OperationPass<func::FuncOp>>
 createDropAbstractInterpCalculationsPass();
 
+std::unique_ptr<OperationPass<func::FuncOp>> createRaiseIfOpShapesDtypesPass();
+
 std::unique_ptr<OperationPass<ModuleOp>> createEraseModuleInitializerPass();
 
 std::unique_ptr<OperationPass<ModuleOp>> createLowerToBackendContractPass(

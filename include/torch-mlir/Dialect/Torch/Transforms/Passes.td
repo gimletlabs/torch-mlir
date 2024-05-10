@@ -345,6 +345,13 @@ def DropAbstractInterpCalculations : Pass<"torch-drop-abstract-interp-calculatio
   }];
 }
 
+def RaiseIfOpShapesDtypes : Pass<"torch-raise-if-op-shapes-dtypes", "func::FuncOp"> {
+  let summary = "If all branches of an prim.If op yield the same shape/dtypes, raise those shapes/dtypes to the if ops results.";
+  let constructor = "mlir::torch::Torch::createRaiseIfOpShapesDtypesPass()";
+  let description = [{
+  }];
+}
+
 def EraseModuleInitializer
     : Pass<"torch-erase-module-initializer", "ModuleOp"> {
   let summary = "Erase the `torch.global_slot.module_initializer` op.";
