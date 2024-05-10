@@ -141,6 +141,7 @@ void mlir::torch::Torch::createTorchSimplificationPipeline(
     // promotion rules actually depend on the shape of the operand.
     createTorchShapeRefinementPipeline(pm, options);
     createTorchDtypeRefinementPipeline(pm, options);
+    pm.addNestedPass<func::FuncOp>(Torch::createRaiseIfOpShapesDtypesPass());
   }
   // Propagate to ABI return types the shape/dtype information discovered by
   // the previous pass. Doing this is ABI-compatible for our backends.
