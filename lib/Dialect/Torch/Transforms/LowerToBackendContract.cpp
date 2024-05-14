@@ -36,6 +36,11 @@ static void markDecomposedOpsAsIllegal(MLIRContext *context,
 
 static LogicalResult checkType(Operation *op, Type type,
                                bool actuallyEmitDiagnostics) {
+  // Allow mixing of other dialects types.
+  if (type.getDialect().getTypeID() !=
+      op->getContext()->getLoadedDialect<Torch::TorchDialect>()->getTypeID()) {
+    return success();
+  }
   // Allow various scalar types that backends are expected to be able to handle.
   if (isa<Torch::IntType, Torch::FloatType, Torch::BoolType, Torch::DeviceType>(
           type))
