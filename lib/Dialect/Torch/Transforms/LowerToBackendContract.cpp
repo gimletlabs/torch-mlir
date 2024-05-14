@@ -17,6 +17,7 @@
 #include "torch-mlir/Dialect/Torch/IR/TorchOps.h"
 #include "torch-mlir/Dialect/Torch/Transforms/Passes.h"
 #include "torch-mlir/Dialect/Torch/Utils/Utils.h"
+#include "torch-mlir/Dialect/TorchConversion/IR/TorchConversionDialect.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Debug.h"
 
@@ -252,6 +253,7 @@ getBackendContractTarget(MLIRContext *context, bool decompose,
                          llvm::StringSet<> backendLegalOpsSet) {
   ConversionTarget target(*context);
   target.addLegalDialect<func::FuncDialect, Torch::TorchDialect>();
+  target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   if (decompose)
     markDecomposedOpsAsIllegal(context, target, backendLegalOpsSet);
   return target;
