@@ -11,6 +11,7 @@ except ImportError:
     # python less than 3.10 doesn't have NoneType
     NoneType = type(None)
 
+import ctypes
 import logging
 import operator
 import re
@@ -2068,13 +2069,21 @@ def _make_vtensor_literal_op(
         assert (
             npy_dtype is not None
         ), f"Can not create literal tensor for unsupported datatype: {tensor.dtype}"
-        # We need a raw buffer of data in order to create an ElementsAttr for the invocation of torch.vtensor.literal,
-        # but torch.Tensor does not fulfill the python buffer/array interface hence we must convert to a numpy array to get
-        # a raw buffer of our data. We can't call torch.Tensor.numpy() directly because this internally forces a call to
-        # detach() which throws an error as we are operating in a FakeTensorMode, hence the simplest way to get this raw
-        # buffer is via the indirection: Tensor -> list -> numpy array. This allows us to create a vtensor literal as
-        # desired, but also limits which data types we can support in this function (see TORCH_DTYPE_TO_NPY_TYPE above)
-        np_tensor = np.array(tensor.tolist()).astype(npy_dtype)
+
+        if tensor.is_contiguous():
+            cpu_tensor = tensor.cpu()
+            # If the tensor is contiguous and on CPU we can avoid the costly Tensor -> list -> numpy array below.
+            # Instead we can use ctypes to access the underlying bytes directly.
+            buffer_pointer = ctypes.cast(cpu_tensor.untyped_storage().data_ptr(), ctypes.POINTER(ctypes.c_char * cpu_tensor.untyped_storage().nbytes()))
+            np_tensor = np.frombuffer(bytes(buffer_pointer.contents), dtype=npy_dtype).reshape(cpu_tensor.shape)
+        else:
+            # We need a raw buffer of data in order to create an ElementsAttr for the invocation of torch.vtensor.literal,
+            # but torch.Tensor does not fulfill the python buffer/array interface hence we must convert to a numpy array to get
+            # a raw buffer of our data. We can't call torch.Tensor.numpy() directly because this internally forces a call to
+            # detach() which throws an error as we are operating in a FakeTensorMode, hence the simplest way to get this raw
+            # buffer is via the indirection: Tensor -> list -> numpy array. This allows us to create a vtensor literal as
+            # desired, but also limits which data types we can support in this function (see TORCH_DTYPE_TO_NPY_TYPE above)
+            np_tensor = np.array(tensor.tolist()).astype(npy_dtype)
         # One element constants are more optimizable as splat DenseElementsAttr. DenseResourceElementsAttr does not
         # support splats, so don't use it for that case. In addition, at the time of writing, it has bugs with handling
         # 0d tensors.
