@@ -219,22 +219,18 @@ with open("README.md", "r", encoding="utf-8") as fh:
 INSTALL_REQUIRES = [
     "numpy",
     "packaging",
+    "torch>=2.0.0",
 ]
 EXT_MODULES = [
     CMakeExtension("torch_mlir._mlir_libs._torchMlir"),
 ]
-NAME = "torch-mlir-core"
+NAME = "torch-mlir-gml"
 
 # If building PyTorch extensions, customize.
 if not TORCH_MLIR_ENABLE_ONLY_MLIR_PYTHON_BINDINGS:
     import torch
 
-    NAME = "torch-mlir"
-    INSTALL_REQUIRES.extend(
-        [
-            f"torch=={torch.__version__}".split("+", 1)[0],
-        ]
-    )
+    NAME = "torch-mlir-gml"
     EXT_MODULES.extend(
         [
             CMakeExtension("torch_mlir._mlir_libs._jit_ir_importer"),

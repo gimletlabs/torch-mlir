@@ -170,10 +170,10 @@ function run_in_docker() {
           clean_build torch_mlir "$python_version"
           ;;
         torch-mlir-core)
-          clean_wheels torch_mlir_core "$python_version"
+          clean_wheels torch_mlir_gml "$python_version"
           build_torch_mlir_core
-          run_audit_wheel torch_mlir_core "$python_version"
-          clean_build torch_mlir_core "$python_version"
+          run_audit_wheel torch_mlir_gml "$python_version"
+          clean_build torch_mlir_gml "$python_version"
           ;;
         out-of-tree)
           setup_venv "$python_version" "$TM_TORCH_VERSION"
