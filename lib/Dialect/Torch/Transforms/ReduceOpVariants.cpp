@@ -259,6 +259,26 @@ void TorchMatchSpecializedBackendOp::populateSpecializedConversions(
         }
         return failure();
       });
+  matcher.populate(
+      "torch.aten._scaled_dot_product_attention_math",
+      [](Torch::OperatorOp op,
+         ConversionPatternRewriter &rewriter) -> LogicalResult {
+        auto uses = op.getResult(1).getUses();
+        if (uses.end() == uses.begin()) {
+          auto oldOperands = op->getOperands();
+          llvm::SmallVector<Value> newOperands{
+              oldOperands[0], oldOperands[1], oldOperands[2], oldOperands[3],
+              oldOperands[4], oldOperands[5], oldOperands[7]};
+
+          auto newOp = rewriter.create<Torch::AtenScaledDotProductAttentionOp>(
+              op.getLoc(), op->getResultTypes()[0], newOperands,
+              op->getAttrs());
+          rewriter.replaceAllUsesWith(op.getResult(0), newOp.getResult());
+          rewriter.eraseOp(op);
+          return success();
+        }
+        return failure();
+      });
 }
 
 bool isSpecializedOperation(Torch::OperatorOp op) { return true; }
