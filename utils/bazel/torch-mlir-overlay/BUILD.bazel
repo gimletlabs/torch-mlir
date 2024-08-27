@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+load("@llvm-project//mlir:build_defs.bzl", "mlir_c_api_cc_library")
 load("@com_github_bazelbuild_buildtools//buildifier:def.bzl", "buildifier")
 
 package(
@@ -921,4 +922,32 @@ cc_binary(
         "@llvm-project//mlir:AllPassesAndDialects",
         "@llvm-project//mlir:MlirOptLib",
     ],
+)
+
+# CAPI
+mlir_c_api_cc_library(
+    name = "TorchMLIRCAPINoPasses",
+    srcs = [
+        "lib/CAPI/Dialects.cpp",
+        "lib/CAPI/TorchOps.cpp",
+        "lib/CAPI/TorchTypes.cpp",
+    ],
+    hdrs = glob([
+        "include/torch-mlir-c/*.h",
+    ]),
+    strip_include_prefix = "include",
+    deps = [
+        ":TorchMLIRTorchDialect",
+        ":TorchMLIRTorchConversionDialect",
+        "@llvm-project//mlir:IR",
+    ],
+    capi_deps = [
+        "@llvm-project//mlir:CAPIIR",
+    ],
+)
+
+# Python files.
+filegroup(
+    name = "PyFiles",
+    srcs = glob(["python/torch_mlir/**/*.py"]),
 )
