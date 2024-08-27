@@ -28,6 +28,11 @@ NB_MODULE(_torchMlir, m) {
         if (load) {
           mlirDialectHandleLoadDialect(handle, context);
         }
+        handle = mlirGetDialectHandle__torch_c__();
+        mlirDialectHandleRegisterDialect(handle, context);
+        if (load) {
+          mlirDialectHandleLoadDialect(handle, context);
+        }
       },
       nb::arg("context"), nb::arg("load") = true);
 

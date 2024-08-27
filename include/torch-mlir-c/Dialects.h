@@ -17,6 +17,7 @@ extern "C" {
 #endif
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Torch, torch);
+MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(TorchConversion, torch_c);
 
 #ifdef __cplusplus
 }
