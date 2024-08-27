@@ -16,8 +16,6 @@
 namespace nb = nanobind;
 
 NB_MODULE(_torchMlir, m) {
-  torchMlirRegisterAllPasses();
-
   m.doc() = "torch-mlir main python extension";
 
   m.def(
