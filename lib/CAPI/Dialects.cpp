@@ -11,6 +11,9 @@
 
 #include "mlir/CAPI/Registration.h"
 #include "torch-mlir/Dialect/Torch/IR/TorchDialect.h"
+#include "torch-mlir/Dialect/TorchConversion/IR/TorchConversionDialect.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Torch, torch,
                                       mlir::torch::Torch::TorchDialect)
+MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(TorchConversion, torch_c,
+                                      mlir::torch::TorchConversion::TorchConversionDialect)
