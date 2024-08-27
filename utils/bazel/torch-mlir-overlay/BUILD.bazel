@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library", "gentbl_filegroup")
 load("@llvm-project//mlir:build_defs.bzl", "mlir_c_api_cc_library")
 load("@com_github_bazelbuild_buildtools//buildifier:def.bzl", "buildifier")
 
@@ -935,4 +935,37 @@ mlir_c_api_cc_library(
 filegroup(
     name = "PyFiles",
     srcs = glob(["python/torch_mlir/**/*.py"]),
+)
+
+# Python generated bindings
+gentbl_filegroup(
+    name = "PythonBindingsGen",
+    tbl_outs = [
+        (
+            ["-gen-python-op-bindings", "-bind-dialect=torch"],
+            "_torch_ops_gen.py",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "python/torch_mlir/dialects/TorchBinding.td",
+    deps = [
+        ":MLIRTorchOpsIncGenTdFiles",
+    ],
+)
+
+
+# Python C extension
+cc_binary(
+    name = "_torchMlir.so",
+    linkstatic = False,
+    linkshared = True,
+    srcs = [
+        "python/TorchMLIRModule.cpp",
+    ],
+    deps = [
+        ":TorchMLIRCAPINoPasses",
+        "@llvm-project//mlir:MLIRBindingsPythonHeadersAndDeps",
+        "@local_config_python//:python_headers",
+        "@pybind11",
+    ],
 )
