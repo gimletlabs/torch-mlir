@@ -14,8 +14,6 @@
 namespace py = pybind11;
 
 PYBIND11_MODULE(_torchMlir, m) {
-  torchMlirRegisterAllPasses();
-
   m.doc() = "torch-mlir main python extension";
 
   m.def(
