@@ -965,7 +965,7 @@ cc_binary(
     deps = [
         ":TorchMLIRCAPINoPasses",
         "@llvm-project//mlir:MLIRBindingsPythonHeadersAndDeps",
-        "@local_config_python//:python_headers",
+        "@rules_python//python/cc:current_py_cc_headers",
         "@pybind11",
     ],
 )
