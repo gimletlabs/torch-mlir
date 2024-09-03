@@ -532,6 +532,7 @@ cc_library(
     strip_include_prefix = "include",
     deps = [
         ":TorchMLIRConversionTorchOnnxToTorchPassIncGen",
+        ":TorchMLIRConversionUtils",
         ":TorchMLIRTorchDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
@@ -636,6 +637,7 @@ cc_library(
     strip_include_prefix = "include",
     deps = [
         ":TorchMLIRTorchConversionDialect",
+        "@llvm-project//mlir:TensorDialect",
         "@llvm-project//mlir:FuncTransforms",
     ],
 )
@@ -814,7 +816,6 @@ cc_library(
         "lib/Dialect/TMTensor/Transforms/Passes.cpp",
     ],
     hdrs = [
-        "include/torch-mlir-dialects/Dialect/TMTensor/Transforms/PassDetail.h",
         "include/torch-mlir-dialects/Dialect/TMTensor/Transforms/Passes.h",
     ],
     strip_include_prefix = "include",
@@ -831,13 +832,6 @@ cc_library(
 )
 
 # RefBackend
-filegroup(
-    name = "TorchMLIRRefBackendPassesDetails",
-    srcs = [
-        "lib/RefBackend/PassDetail.h",
-    ],
-)
-
 td_library(
     name = "TorchMLIRRefBackendPassTdFiles",
     srcs = [
@@ -869,7 +863,7 @@ cc_library(
     name = "TorchMLIRRefBackendPass",
     srcs = [
         "lib/RefBackend/RefBackend.cpp",
-    ] + [":TorchMLIRRefBackendPassesDetails"],
+    ],
     hdrs = [
         "include/torch-mlir/RefBackend/Passes.h",
     ],
@@ -979,6 +973,7 @@ gentbl_filegroup(
     td_file = "python/torch_mlir/dialects/TorchBinding.td",
     deps = [
         ":MLIRTorchOpsIncGenTdFiles",
+        "@llvm-project//mlir:BuiltinDialectTdFiles",
     ],
 )
 
@@ -994,7 +989,7 @@ cc_binary(
     deps = [
         ":TorchMLIRCAPINoPasses",
         "@llvm-project//mlir:MLIRBindingsPythonHeadersAndDeps",
+        "@nanobind",
         "@rules_python//python/cc:current_py_cc_headers",
-        "@pybind11",
     ],
 )
