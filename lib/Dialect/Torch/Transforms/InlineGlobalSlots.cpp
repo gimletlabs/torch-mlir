@@ -50,7 +50,7 @@ using namespace mlir::torch::Torch;
 /// would probably want to go through the effort to indirect through the symbol
 /// tables to make things clearer.
 class FlatSymbolRefProgramPoint
-    : public GenericProgramPointBase<FlatSymbolRefProgramPoint,
+    : public GenericLatticeAnchorBase<FlatSymbolRefProgramPoint,
                                      FlatSymbolRefAttr> {
 public:
   using Base::Base;
@@ -147,14 +147,14 @@ private:
 
 InlineGlobalSlotsAnalysis::InlineGlobalSlotsAnalysis(DataFlowSolver &solver)
     : DataFlowAnalysis(solver) {
-  registerPointKind<FlatSymbolRefProgramPoint>();
+  registerAnchorKind<FlatSymbolRefProgramPoint>();
 }
 
 LogicalResult InlineGlobalSlotsAnalysis::initialize(Operation *top) {
   auto walkResult = top->walk([this](Operation *op) {
     if (auto globalSlot = dyn_cast<Torch::GlobalSlotOp>(op)) {
       auto *state = getOrCreate<InlineGlobalSlotsAnalysisState>(
-          getProgramPoint<FlatSymbolRefProgramPoint>(
+          getLatticeAnchor<FlatSymbolRefProgramPoint>(
               FlatSymbolRefAttr::get(globalSlot.getSymNameAttr())));
       propagateIfChanged(state,
                          state->setSafe(globalSlot.getVisibility() !=
@@ -162,7 +162,7 @@ LogicalResult InlineGlobalSlotsAnalysis::initialize(Operation *top) {
     }
     if (auto globalSlotSet = dyn_cast<Torch::GlobalSlotSetOp>(op)) {
       auto *state = getOrCreate<InlineGlobalSlotsAnalysisState>(
-          getProgramPoint<FlatSymbolRefProgramPoint>(
+          getLatticeAnchor<FlatSymbolRefProgramPoint>(
               globalSlotSet.getSlotAttr()));
       propagateIfChanged(state, state->setSafe(false));
     }
@@ -191,7 +191,7 @@ LogicalResult InlineGlobalSlotsAnalysis::visit(ProgramPoint point) {
     if (auto opResult = dyn_cast<OpResult>(value)) {
       if (auto globalSlotGet =
               dyn_cast<Torch::GlobalSlotGetOp>(opResult.getOwner())) {
-        auto *flatSymbolRefPoint = getProgramPoint<FlatSymbolRefProgramPoint>(
+        auto *flatSymbolRefPoint = getLatticeAnchor<FlatSymbolRefProgramPoint>(
             globalSlotGet.getSlotAttr());
         auto *valueState = getOrCreateFor<InlineGlobalSlotsAnalysisState>(
             flatSymbolRefPoint, globalSlotGet.getResult());
@@ -204,7 +204,7 @@ LogicalResult InlineGlobalSlotsAnalysis::visit(ProgramPoint point) {
 
     return success();
   }
-  if (auto *genericProgramPoint = dyn_cast<GenericProgramPoint *>(point)) {
+  if (auto *genericProgramPoint = dyn_cast<GenericLatticeAnchor *>(point)) {
     if (auto *flatSymbolRefPoint =
             dyn_cast<FlatSymbolRefProgramPoint>(genericProgramPoint)) {
       if (initializeGlobalSlotsOp) {
@@ -250,7 +250,7 @@ bool InlineGlobalSlotsAnalysis::isValueSafeTransferFunction(Value value) {
       auto symName = cast<FlatSymbolRefAttr>(
           initialize.getSlotSymNames()[use.getOperandNumber()]);
       auto *state = getOrCreateFor<InlineGlobalSlotsAnalysisState>(
-          value, getProgramPoint<FlatSymbolRefProgramPoint>(symName));
+          value, getLatticeAnchor<FlatSymbolRefProgramPoint>(symName));
       if (state->isSafe)
         continue;
     }
@@ -299,7 +299,7 @@ class InlineGlobalSlotsPass
       module->walk([&](Operation *op) {
         if (auto globalSlot = dyn_cast<Torch::GlobalSlotOp>(op)) {
           auto *state = solver.lookupState<InlineGlobalSlotsAnalysisState>(
-              solver.getProgramPoint<FlatSymbolRefProgramPoint>(
+              solver.getLatticeAnchor<FlatSymbolRefProgramPoint>(
                   FlatSymbolRefAttr::get(globalSlot.getSymNameAttr())));
           state->print(llvm::dbgs());
           llvm::dbgs() << ": "
@@ -334,7 +334,7 @@ class InlineGlobalSlotsPass
       auto slotSymName =
           cast<FlatSymbolRefAttr>(initialize.getSlotSymNames()[i]);
       Value operand = initialize.getOperand(i);
-      auto symbolRefPoint = solver.getProgramPoint<FlatSymbolRefProgramPoint>(
+      auto symbolRefPoint = solver.getLatticeAnchor<FlatSymbolRefProgramPoint>(
           cast<FlatSymbolRefAttr>(initialize.getSlotSymNames()[i]));
       auto *state =
           solver.lookupState<InlineGlobalSlotsAnalysisState>(symbolRefPoint);
