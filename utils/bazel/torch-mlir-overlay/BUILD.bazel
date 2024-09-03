@@ -965,6 +965,7 @@ gentbl_filegroup(
     td_file = "python/torch_mlir/dialects/TorchBinding.td",
     deps = [
         ":MLIRTorchOpsIncGenTdFiles",
+        "@llvm-project//mlir:BuiltinDialectTdFiles",
     ],
 )
 
