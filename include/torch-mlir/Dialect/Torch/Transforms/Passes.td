@@ -416,7 +416,7 @@ def LowerToBackendContract
                "List of ops to be considered legal for the backend, such as 'aten.foo'.">,
     Option<"extraLibrary", "extra-library", "std::string", /*default=*/"",
            "MLIR module for splicing into the abstract interpretation library">,
-
+    Option<"refinePublicReturn", "refine-public-return", "bool", "true", "Whether to refine public return types">
   ];
   // TODO: Debug why this is needed, even though the input program has func.func
   // ops in it.

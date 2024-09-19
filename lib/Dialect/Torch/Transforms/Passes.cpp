@@ -117,7 +117,9 @@ void mlir::torch::Torch::createTorchSimplificationPipeline(
   // Convert the bulk of non-ABI-visible !torch.tensor's to !torch.vtensor's.
   pm.addNestedPass<func::FuncOp>(Torch::createMaximizeValueSemanticsPass());
   // Update the return op to return value tensors.
-  pm.addPass(Torch::createRefinePublicReturnPass());
+  if (options.refinePublicReturn) {
+    pm.addPass(Torch::createRefinePublicReturnPass());
+  }
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
   // Do shape and dtype refinement.
   // Shape refinement should be run before dtype refinement because Torch type
@@ -127,7 +129,9 @@ void mlir::torch::Torch::createTorchSimplificationPipeline(
   pm.addNestedPass<func::FuncOp>(Torch::createRaiseIfOpShapesDtypesPass());
   // Propagate to ABI return types the shape/dtype information discovered by
   // the previous pass. Doing this is ABI-compatible for our backends.
-  pm.addPass(Torch::createRefinePublicReturnPass());
+  if (options.refinePublicReturn) {
+    pm.addPass(Torch::createRefinePublicReturnPass());
+  }
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
   if (options.decompose) {
     pm.addNestedPass<func::FuncOp>(
