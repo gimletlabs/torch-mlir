@@ -75,6 +75,8 @@ struct TorchLoweringPipelineOptions
           "disabled, non-finites will be replaced with the closest finite "
           "value for a given dtype."),
       llvm::cl::init(true)};
+
+  Option<bool> refinePublicReturn{*this, "refine-public-return", llvm::cl::init(true)};
 };
 
 /// Creates a pipeline that lowers the object graph IR that is produced by
@@ -156,7 +158,7 @@ std::unique_ptr<OperationPass<ModuleOp>> createEraseModuleInitializerPass();
 
 std::unique_ptr<OperationPass<ModuleOp>> createLowerToBackendContractPass(
     int maxIterations, bool decompose, bool shapeDtypeRefine,
-    ArrayRef<std::string> backendLegalOps, StringRef extraLibrary);
+    ArrayRef<std::string> backendLegalOps, StringRef extraLibrary, bool refinePublicReturn = true);
 
 std::unique_ptr<OperationPass<ModuleOp>>
 createVerifyBackendContractNoDecompositionsPass();

@@ -290,6 +290,7 @@ public:
     options.shapeDtypeRefine = shapeDtypeRefine;
     options.backendLegalOps = backendLegalOps;
     options.extraLibrary = extraLibrary;
+    options.refinePublicReturn = refinePublicReturn;
     createTorchSimplificationPipeline(pm, options);
 
     int i = 0;
@@ -342,7 +343,8 @@ public:
 
 std::unique_ptr<OperationPass<ModuleOp>> createLowerToBackendContractPass(
     int maxIterations, bool decompose, bool shapeDtypeRefine,
-    ArrayRef<std::string> backendLegalOps, StringRef extraLibrary) {
+    ArrayRef<std::string> backendLegalOps, StringRef extraLibrary,
+    bool refinePublicReturn) {
   LowerToBackendContractOptions options;
   options.maxIterations = maxIterations;
   options.decompose = decompose;
@@ -350,6 +352,7 @@ std::unique_ptr<OperationPass<ModuleOp>> createLowerToBackendContractPass(
   options.backendLegalOps.append(backendLegalOps.begin(),
                                  backendLegalOps.end());
   options.extraLibrary = extraLibrary.str();
+  options.refinePublicReturn = refinePublicReturn;
   return std::make_unique<LowerToBackendContractPass>(options);
 }
 
