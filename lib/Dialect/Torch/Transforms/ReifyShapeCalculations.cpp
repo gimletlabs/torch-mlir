@@ -14,6 +14,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "torch-mlir/Dialect/Torch/IR/TorchOps.h"
 #include "torch-mlir/Dialect/Torch/Transforms/Passes.h"
+#include "torch-mlir/Dialect/Torch/Utils/Utils.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace mlir;
@@ -82,6 +83,25 @@ struct ReifyShapeCalculationsPass
     // in a `torch.shape.calculate` op.
     SmallVector<std::string> functionsNeeded;
     WalkResult walkResult = module.walk([&](Operation *op) -> WalkResult {
+      if (auto index_op = llvm::dyn_cast<Torch::AtenIndexTensorOp>(op)) {
+        // IndexTensor shape inference is incorrect for boolean masks.
+        // Unforunately, torch-mlir's shape calculation infrastructure
+        // doesn't provide data types to the calculation functions so we can't
+        // easily fix the problem. Instead we disable shape inference for
+        // IndexTensor ops that have boolean inputs.
+
+        SmallVector<Value> indices;
+        if (Torch::getListConstructElements(index_op.getIndices(), indices)) {
+          for (auto tensor : indices) {
+            auto tensorType =
+                llvm::dyn_cast<Torch::BaseTensorType>(tensor.getType());
+            if (tensorType && tensorType.hasDtype() &&
+                tensorType.getDtype().isSignlessInteger(1)) {
+              return WalkResult::advance();
+            }
+          }
+        }
+      }
       return wrapWithCalculateOpIfLibraryFunctionAvailable(
           op, *library, LibraryFunctionKind::ShapeFunction, functionsNeeded,
           shapeFunctionArgsBuilder);
