@@ -9337,6 +9337,63 @@ static FailureOr<Value> createNewIndices(Operation *op,
   return newIndexList;
 }
 
+static LogicalResult
+createIndexTensorsFromBoolMask(Operation *op, PatternRewriter &rewriter,
+                               Value tensor,
+                               SmallVectorImpl<Value> &indexTensors) {
+  auto loc = op->getLoc();
+  auto type = llvm::cast<Torch::BaseTensorType>(tensor.getType());
+
+  auto rank = type.getSizes().size();
+
+  auto indicesResultType = ValueTensorType::get(
+      op->getContext(), ArrayRef<int64_t>{-1, rank},
+      rewriter.getIntegerType(/*width=*/64, /*isSigned=*/true));
+  auto indices =
+      rewriter.create<Torch::AtenNonzeroOp>(loc, indicesResultType, tensor);
+
+  // In pytorch a boolean mask that is not 1D will expand beyond the dimension
+  // it is indexing. For example, if I have a tensor `x` of shape [1,2,3,4,5]
+  // and a boolean mask `mask` of shape [2,3,4]. x[:, mask, :] would result in a
+  // [1, ?, 5] tensor where ? is the number of True values in `mask`.
+  // So we need to create a new index tensor for each dimension it expands to.
+  auto dimResultType = ValueTensorType::get(
+      op->getContext(), ArrayRef<int64_t>{-1},
+      rewriter.getIntegerType(/*width*/ 64, /*isSigned*/ true));
+  auto dim =
+      rewriter.create<Torch::ConstantIntOp>(loc, rewriter.getI64IntegerAttr(1));
+  for (int64_t i = 0; i < rank; ++i) {
+    auto index = rewriter.create<Torch::ConstantIntOp>(
+        loc, rewriter.getI64IntegerAttr(i));
+    auto dimIndices = rewriter.create<Torch::AtenSelectIntOp>(
+        loc, dimResultType, indices, dim, index);
+    indexTensors.push_back(dimIndices);
+  }
+
+  return success();
+}
+
+static LogicalResult
+replaceBoolMasksWithIndices(Operation *op, PatternRewriter &rewriter,
+                            SmallVectorImpl<Value> &indices) {
+  SmallVector<Value> newIndices;
+  for (auto tensor : indices) {
+    auto tensorType = llvm::dyn_cast<Torch::BaseTensorType>(tensor.getType());
+    if (!tensorType || !tensorType.hasDtype() || !tensorType.hasSizes() ||
+        !tensorType.getDtype().isSignlessInteger(1)) {
+      newIndices.push_back(tensor);
+      continue;
+    }
+
+    if (failed(
+            createIndexTensorsFromBoolMask(op, rewriter, tensor, newIndices)))
+      return rewriter.notifyMatchFailure(
+          op, "failed to convert boolean mask to index tensor");
+  }
+  indices = newIndices;
+  return success();
+}
+
 // The goal of this pattern is to eliminate `None` index in aten.Index.Tensor's
 // `indices` param and transform it to aten.index.Tensor_hacked_twin, for the
 // ease of various backend.
@@ -9365,6 +9422,11 @@ public:
     auto isTensor = [](Value v) {
       return isa<Torch::BaseTensorType>(v.getType());
     };
+
+    if (failed(replaceBoolMasksWithIndices(op, rewriter, indices))) {
+      return rewriter.notifyMatchFailure(
+          op, "failed to convert all boolean masks to index tensors");
+    }
 
     // directly replace aten.Index.Tensor with aten.index.Tensor_hacked_twin
     if (llvm::all_of(indices, isTensor)) {
