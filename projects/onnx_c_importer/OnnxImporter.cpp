@@ -373,15 +373,104 @@ MlirType ContextCache::ConvertTensorElementType(int elem_type) {
 MlirAttribute
 ContextCache::ConvertTensorProtoToAttr(const onnx::TensorProto &tp) {
   MlirType tensor_type = ConvertTensorProtoToBuiltinType(tp);
+  // TODO(philkuz/james): We copy the raw_data here instead of pointing to the
+  // original ONNX data to prevent use-after-free issues.
+  // However this conversion isn't available for the less-common data types
+  // like float8, uint4, int4, etc.
   if (tp.has_raw_data()) {
-    std::string sanitized_name = SanitizeNameAsIdentifier(tp.name());
-    // Conveniently, DenseResourceElementsAttr shares the raw data
-    // format. We just give it maximum numeric alignment.
-    return mlirUnmanagedDenseResourceElementsAttrGet(
-        tensor_type, toMlirStringRef(sanitized_name),
-        const_cast<void *>(static_cast<const void *>(tp.raw_data().data())),
-        tp.raw_data().size(), /*dataAlignment=*/8, /*dataIsMutable=*/false,
-        /*deleter=*/nullptr, /*userData=*/nullptr);
+    // Get raw data size and pointer
+    const void *raw_data = tp.raw_data().data();
+    size_t raw_size = tp.raw_data().size();
+
+    // Handle raw data based on data type
+    switch (tp.data_type()) {
+    case onnx::TensorProto::FLOAT: {
+      size_t num_elements = raw_size / sizeof(float);
+      return mlirDenseElementsAttrFloatGet(
+          tensor_type, num_elements, static_cast<const float *>(raw_data));
+    }
+    case onnx::TensorProto::UINT8: {
+      size_t num_elements = raw_size / sizeof(uint8_t);
+      return mlirDenseElementsAttrUInt8Get(
+          tensor_type, num_elements, static_cast<const uint8_t *>(raw_data));
+    }
+    case onnx::TensorProto::INT8: {
+      size_t num_elements = raw_size / sizeof(int8_t);
+      return mlirDenseElementsAttrInt8Get(
+          tensor_type, num_elements, static_cast<const int8_t *>(raw_data));
+    }
+    case onnx::TensorProto::UINT16: {
+      size_t num_elements = raw_size / sizeof(uint16_t);
+      return mlirDenseElementsAttrUInt16Get(
+          tensor_type, num_elements, static_cast<const uint16_t *>(raw_data));
+    }
+    case onnx::TensorProto::INT16: {
+      size_t num_elements = raw_size / sizeof(int16_t);
+      return mlirDenseElementsAttrInt16Get(
+          tensor_type, num_elements, static_cast<const int16_t *>(raw_data));
+    }
+    case onnx::TensorProto::INT32: {
+      size_t num_elements = raw_size / sizeof(int32_t);
+      return mlirDenseElementsAttrInt32Get(
+          tensor_type, num_elements, static_cast<const int32_t *>(raw_data));
+    }
+    case onnx::TensorProto::INT64: {
+      size_t num_elements = raw_size / sizeof(int64_t);
+      return mlirDenseElementsAttrInt64Get(
+          tensor_type, num_elements, static_cast<const int64_t *>(raw_data));
+    }
+    case onnx::TensorProto::BOOL: {
+      size_t num_elements = raw_size / sizeof(bool);
+      // Convert bool array to int array since MLIR API expects int*
+      std::vector<int> bool_data(num_elements);
+      const bool *bool_ptr = static_cast<const bool *>(raw_data);
+      for (size_t i = 0; i < num_elements; i++) {
+        bool_data[i] = bool_ptr[i];
+      }
+      return mlirDenseElementsAttrBoolGet(tensor_type, num_elements,
+                                          bool_data.data());
+    }
+    case onnx::TensorProto::FLOAT16: {
+      size_t num_elements =
+          raw_size / sizeof(uint16_t); // float16 stored as uint16
+      return mlirDenseElementsAttrFloat16Get(
+          tensor_type, num_elements, static_cast<const uint16_t *>(raw_data));
+    }
+    case onnx::TensorProto::DOUBLE: {
+      size_t num_elements = raw_size / sizeof(double);
+      return mlirDenseElementsAttrDoubleGet(
+          tensor_type, num_elements, static_cast<const double *>(raw_data));
+    }
+    case onnx::TensorProto::UINT32: {
+      size_t num_elements = raw_size / sizeof(uint32_t);
+      return mlirDenseElementsAttrUInt32Get(
+          tensor_type, num_elements, static_cast<const uint32_t *>(raw_data));
+    }
+    case onnx::TensorProto::UINT64: {
+      size_t num_elements = raw_size / sizeof(uint64_t);
+      return mlirDenseElementsAttrUInt64Get(
+          tensor_type, num_elements, static_cast<const uint64_t *>(raw_data));
+    }
+    case onnx::TensorProto::COMPLEX64:
+    case onnx::TensorProto::COMPLEX128:
+    case onnx::TensorProto::BFLOAT16:
+    case onnx::TensorProto::FLOAT8E4M3FN:
+    case onnx::TensorProto::FLOAT8E4M3FNUZ:
+    case onnx::TensorProto::FLOAT8E5M2:
+    case onnx::TensorProto::FLOAT8E5M2FNUZ:
+    case onnx::TensorProto::UINT4:
+    case onnx::TensorProto::INT4:
+    // According to the ONNX spec, the raw_data field is used for all data types
+    // except for STRING and UNDEFINED.
+    case onnx::TensorProto::STRING:
+    case onnx::TensorProto::UNDEFINED:
+    default: {
+      std::string msg = "Unsupported raw data tensor type: ";
+      msg.append(std::to_string(tp.data_type()));
+      model_info_.SetError(std::move(msg));
+      return {nullptr};
+    }
+    }
   } else {
     switch (tp.data_type()) {
     case onnx::TensorProto::DataType::TensorProto_DataType_FLOAT:
@@ -569,7 +658,8 @@ void NodeImporter::PopulateGraphAttrs(MlirOperation container_op) {
   std::unordered_map<std::string_view, MlirAttribute> opset_versions;
   // Determine model level opset versions.
   for (const onnx::OperatorSetIdProto &opset_import : m.opset_import()) {
-    if (opset_import.has_domain() && opset_import.domain() != "" && opset_import.domain() != "ai.onnx") {
+    if (opset_import.has_domain() && opset_import.domain() != "" &&
+        opset_import.domain() != "ai.onnx") {
       opset_versions[opset_import.domain()] =
           mlirIntegerAttrGet(i64_type, opset_import.version());
     } else {
@@ -626,7 +716,7 @@ Status NodeImporter::ImportAll() {
   // properly formed.
   std::vector<MlirValue> output_values;
   for (const auto *output : graph_info_.outputs()) {
-    const auto& name = output->name();
+    const auto &name = output->name();
     auto found_it = nv_map_.find(name);
     if (found_it == nv_map_.end()) {
       std::string msg = "Non topologically produced ONNX graph output '";
