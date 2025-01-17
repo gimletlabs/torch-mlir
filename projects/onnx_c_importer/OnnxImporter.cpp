@@ -805,15 +805,102 @@ MlirType ContextCache::ConvertTypeProto(const onnx::TypeProto *ptrTp) {
 MlirAttribute
 ContextCache::ConvertTensorProtoToAttr(const onnx::TensorProto &tp) {
   MlirType tensorType = ConvertTensorProtoToBuiltinType(tp);
+  // TODO(philkuz/james): We copy the raw_data here instead of pointing to the
+  // original ONNX data to prevent use-after-free issues.
+  // However this conversion isn't available for the less-common data types
+  // like float8, uint4, int4, etc.
   if (tp.has_raw_data()) {
-    std::string sanitizedName = SanitizeNameAsIdentifier(tp.name());
-    // Conveniently, DenseResourceElementsAttr shares the raw data
-    // format. We just give it maximum numeric alignment.
-    return mlirUnmanagedDenseResourceElementsAttrGet(
-        tensorType, toMlirStringRef(sanitizedName),
-        const_cast<void *>(static_cast<const void *>(tp.raw_data().data())),
-        tp.raw_data().size(), /*dataAlignment=*/8, /*dataIsMutable=*/false,
-        /*deleter=*/nullptr, /*userData=*/nullptr);
+    const void *rawData = tp.raw_data().data();
+    size_t rawSize = tp.raw_data().size();
+
+    switch (tp.data_type()) {
+    case onnx::TensorProto::FLOAT: {
+      size_t numElements = rawSize / sizeof(float);
+      return mlirDenseElementsAttrFloatGet(
+          tensorType, numElements, static_cast<const float *>(rawData));
+    }
+    case onnx::TensorProto::UINT8: {
+      size_t numElements = rawSize / sizeof(uint8_t);
+      return mlirDenseElementsAttrUInt8Get(
+          tensorType, numElements, static_cast<const uint8_t *>(rawData));
+    }
+    case onnx::TensorProto::INT8: {
+      size_t numElements = rawSize / sizeof(int8_t);
+      return mlirDenseElementsAttrInt8Get(
+          tensorType, numElements, static_cast<const int8_t *>(rawData));
+    }
+    case onnx::TensorProto::UINT16: {
+      size_t numElements = rawSize / sizeof(uint16_t);
+      return mlirDenseElementsAttrUInt16Get(
+          tensorType, numElements, static_cast<const uint16_t *>(rawData));
+    }
+    case onnx::TensorProto::INT16: {
+      size_t numElements = rawSize / sizeof(int16_t);
+      return mlirDenseElementsAttrInt16Get(
+          tensorType, numElements, static_cast<const int16_t *>(rawData));
+    }
+    case onnx::TensorProto::INT32: {
+      size_t numElements = rawSize / sizeof(int32_t);
+      return mlirDenseElementsAttrInt32Get(
+          tensorType, numElements, static_cast<const int32_t *>(rawData));
+    }
+    case onnx::TensorProto::INT64: {
+      size_t numElements = rawSize / sizeof(int64_t);
+      return mlirDenseElementsAttrInt64Get(
+          tensorType, numElements, static_cast<const int64_t *>(rawData));
+    }
+    case onnx::TensorProto::BOOL: {
+      size_t numElements = rawSize / sizeof(bool);
+      // Convert bool array to int array since MLIR API expects int*
+      std::vector<int> boolData(numElements);
+      const bool *boolPtr = static_cast<const bool *>(rawData);
+      for (size_t i = 0; i < numElements; i++) {
+        boolData[i] = boolPtr[i];
+      }
+      return mlirDenseElementsAttrBoolGet(tensorType, numElements,
+                                          boolData.data());
+    }
+    case onnx::TensorProto::FLOAT16: {
+      size_t numElements =
+          rawSize / sizeof(uint16_t); // float16 stored as uint16
+      return mlirDenseElementsAttrFloat16Get(
+          tensorType, numElements, static_cast<const uint16_t *>(rawData));
+    }
+    case onnx::TensorProto::DOUBLE: {
+      size_t numElements = rawSize / sizeof(double);
+      return mlirDenseElementsAttrDoubleGet(
+          tensorType, numElements, static_cast<const double *>(rawData));
+    }
+    case onnx::TensorProto::UINT32: {
+      size_t numElements = rawSize / sizeof(uint32_t);
+      return mlirDenseElementsAttrUInt32Get(
+          tensorType, numElements, static_cast<const uint32_t *>(rawData));
+    }
+    case onnx::TensorProto::UINT64: {
+      size_t numElements = rawSize / sizeof(uint64_t);
+      return mlirDenseElementsAttrUInt64Get(
+          tensorType, numElements, static_cast<const uint64_t *>(rawData));
+    }
+    case onnx::TensorProto::COMPLEX64:
+    case onnx::TensorProto::COMPLEX128:
+    case onnx::TensorProto::BFLOAT16:
+    case onnx::TensorProto::FLOAT8E4M3FN:
+    case onnx::TensorProto::FLOAT8E4M3FNUZ:
+    case onnx::TensorProto::FLOAT8E5M2:
+    case onnx::TensorProto::FLOAT8E5M2FNUZ:
+    case onnx::TensorProto::UINT4:
+    case onnx::TensorProto::INT4:
+    // According to the ONNX spec, the raw_data field is used for all data types
+    // except for STRING and UNDEFINED.
+    case onnx::TensorProto::STRING:
+    case onnx::TensorProto::UNDEFINED:
+    default: {
+      std::string msg = "Unsupported raw data tensor type: ";
+      msg.append(std::to_string(tp.data_type()));
+      model_info_.SetError(std::move(msg));
+      return {nullptr};
+    }
+    }
   } else {
     switch (tp.data_type()) {
     case onnx::TensorProto::DataType::TensorProto_DataType_FLOAT:
