@@ -19,8 +19,13 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
+def TorchMemoryEffectImplTrait : NativeOpTrait<"TorchMemoryEffectImplTrait">;
+
+def TorchMemoryEffectTrait : TraitList<[
+    MemoryEffectsOpInterface, TorchMemoryEffectImplTrait]>;
+
 class Torch_Op<string mnemonic, list<Trait> traits = []>
-    : Op<Torch_Dialect, mnemonic, traits> {
+    : Op<Torch_Dialect, mnemonic, !listconcat(traits, [TorchMemoryEffectTrait])> {
 }
 
 include "torch-mlir/Dialect/Torch/IR/GeneratedTorchOps.td"

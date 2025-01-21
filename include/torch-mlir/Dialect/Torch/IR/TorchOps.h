@@ -23,6 +23,33 @@
 #include "torch-mlir/Dialect/Torch/IR/TorchTraits.h"
 #include "torch-mlir/Dialect/Torch/IR/TorchTypes.h"
 
+namespace mlir {
+namespace OpTrait {
+
+template <typename ConcreteType>
+struct TorchMemoryEffectImplTrait
+    : public TraitBase<ConcreteType, TorchMemoryEffectImplTrait> {
+
+  void
+  getEffects(SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+                 &effects) {
+    auto *op = this->getOperation();
+    for (auto &operand : op->getOpOperands()) {
+      if (operand.get()
+              .getType()
+              .template isa<torch::Torch::NonValueTensorType>()) {
+        // Conservatively assume that all non-value tensor operands are read and
+        // written.
+        effects.emplace_back(MemoryEffects::Read::get(), &operand);
+        effects.emplace_back(MemoryEffects::Write::get(), &operand);
+      }
+    }
+  }
+};
+
+} // namespace OpTrait
+} // namespace mlir
+
 #define GET_OP_CLASSES
 #include "torch-mlir/Dialect/Torch/IR/TorchOps.h.inc"
 
