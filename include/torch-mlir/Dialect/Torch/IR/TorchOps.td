@@ -19,13 +19,15 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
+defvar HasSideEffect = 0;
+
 def TorchMemoryEffectImplTrait : NativeOpTrait<"TorchMemoryEffectImplTrait">;
 
 def TorchMemoryEffectTrait : TraitList<[
     MemoryEffectsOpInterface, TorchMemoryEffectImplTrait]>;
 
-class Torch_Op<string mnemonic, list<Trait> traits = []>
-    : Op<Torch_Dialect, mnemonic, !listconcat(traits, [TorchMemoryEffectTrait])> {
+class Torch_Op<string mnemonic, list<Trait> traits = [], bit enable_mem_effect_iface = 1>
+    : Op<Torch_Dialect, mnemonic, !listconcat(traits, !if(!eq(enable_mem_effect_iface, 1), [TorchMemoryEffectTrait], []))> {
 }
 
 include "torch-mlir/Dialect/Torch/IR/GeneratedTorchOps.td"
@@ -36,7 +38,7 @@ include "torch-mlir/Dialect/Torch/IR/GeneratedTorchOps.td"
 
 def Torch_NnModuleOp : Torch_Op<"nn_module", [
     DeclareOpInterfaceMethods<SymbolUserOpInterface>,
-    SingleBlockImplicitTerminator<"::mlir::torch::Torch::NnModuleTerminatorOp">]> {
+    SingleBlockImplicitTerminator<"::mlir::torch::Torch::NnModuleTerminatorOp">], HasSideEffect> {
   let summary = "Constructs a torch.nn.Module";
   let description = [{
     This op is used to represent a torch.nn.Module when importing a
@@ -79,7 +81,7 @@ def Torch_NnModuleOp : Torch_Op<"nn_module", [
 }
 
 def Torch_NnModuleTerminatorOp : Torch_Op<"nn_module_terminator", [Terminator,
-    HasParent<"::mlir::torch::Torch::NnModuleOp">]> {
+    HasParent<"::mlir::torch::Torch::NnModuleOp">], HasSideEffect> {
   let summary = "Implicit terminator for torch.nn_module";
 
   let arguments = (ins);
@@ -89,7 +91,7 @@ def Torch_NnModuleTerminatorOp : Torch_Op<"nn_module_terminator", [Terminator,
 }
 
 def Torch_SlotOp : Torch_Op<"slot", [
-    HasParent<"::mlir::torch::Torch::NnModuleOp">]> {
+    HasParent<"::mlir::torch::Torch::NnModuleOp">], HasSideEffect> {
   let summary = "Define the value of a slot of a torch.nn.Module";
   let description = [{
     This op specifies that the initial value of the slot `name` of the
@@ -111,7 +113,7 @@ def Torch_SlotOp : Torch_Op<"slot", [
 
 def Torch_ClassTypeOp : Torch_Op<"class_type", [
     Symbol,
-    SingleBlockImplicitTerminator<"::mlir::torch::Torch::ClassTypeTerminatorOp">]> {
+    SingleBlockImplicitTerminator<"::mlir::torch::Torch::ClassTypeTerminatorOp">], HasSideEffect> {
   let summary = "Constructs a torch.ClassType";
   let description = [{
     Declares a class type. Class types are the types used to describe
@@ -156,7 +158,7 @@ def Torch_ClassTypeOp : Torch_Op<"class_type", [
 }
 
 def Torch_ClassTypeTerminatorOp : Torch_Op<"class_type_terminator", [Terminator,
-    HasParent<"::mlir::torch::Torch::ClassTypeOp">]> {
+    HasParent<"::mlir::torch::Torch::ClassTypeOp">], HasSideEffect> {
   let summary = "Implicit terminator for torch.class_type";
 
   let arguments = (ins);
@@ -168,7 +170,7 @@ def Torch_ClassTypeTerminatorOp : Torch_Op<"class_type_terminator", [Terminator,
 def Torch_MethodOp : Torch_Op<"method", [
     HasParent<"::mlir::torch::Torch::ClassTypeOp">,
     DeclareOpInterfaceMethods<SymbolUserOpInterface>
-  ]> {
+  ], HasSideEffect> {
   let summary = "Declare a method of a torch.class_type";
   let description = [{
     This op declaratively specifies that the parent torch.class_type has a
@@ -198,7 +200,7 @@ def Torch_MethodOp : Torch_Op<"method", [
 
 def Torch_AttrOp : Torch_Op<"attr", [
     HasParent<"::mlir::torch::Torch::ClassTypeOp">
-  ]> {
+  ], HasSideEffect> {
   let summary = "Declare an attribute of a torch.class_type";
   let description = [{
     This op declaratively specifies that torch.nn.Module's of the parent
@@ -234,7 +236,7 @@ def Torch_AttrOp : Torch_Op<"attr", [
 
 def Torch_GlobalSlotOp : Torch_Op<"global_slot", [
     Symbol,
-  ]> {
+  ], HasSideEffect> {
   let summary = "A slot with global storage";
   let description = [{
     Represents a slot with global storage. The slot semantics are the same
@@ -259,7 +261,7 @@ def Torch_GlobalSlotModuleInitializerOp : Torch_Op<"global_slot.module_initializ
     IsolatedFromAbove,
     SingleBlockImplicitTerminator<"::mlir::torch::Torch::InitializeGlobalSlotsOp">,
     AllowedInModuleInitializer,
-  ]> {
+  ], HasSideEffect> {
   let summary = "Module initializer for all `torch.global_slot` ops";
   let description = [{
     Initializer function that runs once at program startup to initialize
@@ -286,7 +288,7 @@ def Torch_InitializeGlobalSlotsOp : Torch_Op<"initialize.global_slots", [
     Terminator,
     HasParent<"::mlir::torch::Torch::GlobalSlotModuleInitializerOp">,
     AllowedInModuleInitializer,
-  ]> {
+  ], HasSideEffect> {
   let summary = "Terminator for torch.global_slot.module_initializer region";
   let description = [{
     Atomically updates the value of all the global slots named in `slotSymNames`
@@ -310,7 +312,7 @@ def Torch_InitializeGlobalSlotsOp : Torch_Op<"initialize.global_slots", [
 
 def Torch_GlobalSlotInitOp : Torch_Op<"global_slot.init", [
     Terminator,
-    HasParent<"::mlir::torch::Torch::GlobalSlotOp">]> {
+    HasParent<"::mlir::torch::Torch::GlobalSlotOp">], HasSideEffect> {
   let summary = "yield-like terminator for torch.initialize.global_slotsr region";
   let description = [{
     The operand to this op becomes the initial value of the parent
@@ -342,7 +344,7 @@ def Torch_GlobalSlotGetOp : Torch_Op<"global_slot.get", []> {
   }];
 }
 
-def Torch_GlobalSlotSetOp : Torch_Op<"global_slot.set", []> {
+def Torch_GlobalSlotSetOp : Torch_Op<"global_slot.set", [], HasSideEffect> {
   let summary = "Set the value stored in a torch.global_slot";
 
   let arguments = (ins
@@ -470,7 +472,7 @@ def Torch_PrimCreateObjectOp: Torch_Op<"prim.CreateObject", [
   }];
 }
 
-def Torch_PrimGetAttrOp : Torch_Op<"prim.GetAttr", []> {
+def Torch_PrimGetAttrOp : Torch_Op<"prim.GetAttr", [], HasSideEffect> {
   let summary = "TorchScript prim::GetAttr op";
 
   let arguments = (ins StrAttr:$name, Torch_NnModuleType:$receiver);
@@ -481,7 +483,7 @@ def Torch_PrimGetAttrOp : Torch_Op<"prim.GetAttr", []> {
   }];
 }
 
-def Torch_PrimSetAttrOp : Torch_Op<"prim.SetAttr", []> {
+def Torch_PrimSetAttrOp : Torch_Op<"prim.SetAttr", [], HasSideEffect> {
   let summary = "TorchScript prim::SetAttr op";
 
   let arguments = (ins
@@ -512,7 +514,7 @@ def Torch_PrimCallMethodOp : Torch_Op<"prim.CallMethod", []> {
 }
 
 def Torch_PrimLoopOp : Torch_Op<"prim.Loop", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getEntrySuccessorOperands"]>]> {
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getEntrySuccessorOperands"]>], HasSideEffect> {
   let summary = "TorchScript prim::Loop op";
   let description = [{
     This op (together with prim.Loop.condition) define a looping construct
@@ -544,7 +546,7 @@ def Torch_PrimLoopOp : Torch_Op<"prim.Loop", [
 def Torch_PrimLoopConditionOp : Torch_Op<"prim.Loop.condition", [
     DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
     Terminator,
-    HasParent<"::mlir::torch::Torch::PrimLoopOp">]> {
+    HasParent<"::mlir::torch::Torch::PrimLoopOp">], HasSideEffect> {
   let summary = "yield-like terminator for torch.prim.Loop";
   let description = [{
     Does not correspond to any torch prim op directly (the way that they model
@@ -564,7 +566,7 @@ def Torch_PrimLoopConditionOp : Torch_Op<"prim.Loop.condition", [
 }
 
 def Torch_PrimIfOp : Torch_Op<"prim.If", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>]> {
+  DeclareOpInterfaceMethods<RegionBranchOpInterface>], HasSideEffect> {
   let summary = "TorchScript prim::If op";
   let description = [{
     This op (together with prim.If.yield) define a conditional control flow
@@ -610,7 +612,7 @@ def Torch_PrimIfYieldOp : Torch_Op<"prim.If.yield", [
   }];
 }
 
-def Torch_PrimStoreOp : Torch_Op<"prim.Store", []> {
+def Torch_PrimStoreOp : Torch_Op<"prim.Store", [], HasSideEffect> {
   let summary = "store operation";
   let description = [{
     This op represents a prim::Store node in the Python object graph.
@@ -621,7 +623,7 @@ def Torch_PrimStoreOp : Torch_Op<"prim.Store", []> {
   }];
 }
 
-def Torch_PrimLoadOp : Torch_Op<"prim.Load", []> {
+def Torch_PrimLoadOp : Torch_Op<"prim.Load", [], HasSideEffect> {
   let summary = "load operation";
   let description = [{
     This op represents a prim::Load node in the Python object graph.
@@ -633,7 +635,7 @@ def Torch_PrimLoadOp : Torch_Op<"prim.Load", []> {
   }];
 }
 
-def Torch_PrimEnterOp : Torch_Op<"prim.Enter", []> {
+def Torch_PrimEnterOp : Torch_Op<"prim.Enter", [], HasSideEffect> {
   let summary = "enter operation";
   let description = [{
     This op represents a prim::Enter node in the Python object graph.
@@ -645,7 +647,7 @@ def Torch_PrimEnterOp : Torch_Op<"prim.Enter", []> {
   }];
 }
 
-def Torch_PrimExitOp : Torch_Op<"prim.Exit", []> {
+def Torch_PrimExitOp : Torch_Op<"prim.Exit", [], HasSideEffect> {
   let summary = "exit operation";
   let description = [{
     This op represents a prim::Exit node in the Python object graph.
@@ -836,7 +838,7 @@ def Torch_DerefineOp : Torch_Op<"derefine", [
 
 def Torch_OperatorOp : Torch_Op<"operator", [
     AllowsTypeRefinement
-  ]> {
+  ], HasSideEffect> {
   let summary = "Opaque torch operator";
   let description = [{
     Represents an invocation of a `torch::jit::Operator` for which we don't
@@ -857,7 +859,7 @@ def Torch_OperatorOp : Torch_Op<"operator", [
 }
 
 def Torch_OperatorTerminatorOp : Torch_Op<"operator_terminator", [Terminator,
-    HasParent<"::mlir::torch::Torch::OperatorOp">]> {
+    HasParent<"::mlir::torch::Torch::OperatorOp">], HasSideEffect> {
   let summary = "Implicit terminator for torch.operator";
 
   let arguments = (ins Variadic<AnyTorchType>:$operands);
@@ -916,7 +918,7 @@ def Torch_NonValueTensorLiteralOp : Torch_Op<"tensor.literal", [
     DeclareOpInterfaceMethods<InferTypeOpInterface, ["isCompatibleReturnTypes"]>,
     AllowsTypeRefinement,
     AllowedInModuleInitializer,
-  ]> {
+  ], HasSideEffect> {
   let summary = "Create a value of !torch.tensor type from a literal";
   let description = [{
     Example:
@@ -1010,7 +1012,7 @@ def Torch_CopyToNonValueTensorOp : Torch_Op<"copy.to_tensor", [
     TypesMatchWith<"operand is corresponding !torch.vtensor",
                    "result", "operand",
                    "cast<NonValueTensorType>($_self).getWithValueSemantics()">,
-  ]> {
+  ], HasSideEffect> {
   let summary = "Create a !torch.tensor with the same contents as the operand";
   let description = [{
     This op is used to convert from !torch.vtensor to !torch.tensor.
@@ -1071,7 +1073,7 @@ def Torch_OverwriteTensorContentsOp : Torch_Op<"overwrite.tensor.contents", [
     TypesMatchWith<"overwritten tensor type is corresponding !torch.tensor of value tensor type",
                    "value", "overwritten",
                    "cast<ValueTensorType>($_self).getWithoutValueSemantics()">
-  ]> {
+  ], HasSideEffect> {
   let summary = "Ovewrite the contents of tensor with values from another.";
   let description = [{
     Replaces the contents of `overwritten` with corresponding values from
@@ -1171,7 +1173,7 @@ def Torch_RuntimeAssertOp: Torch_Op<"runtime.assert", [
     AllowsTypeRefinement,
     HasValueSemantics,
     ReadOnly
-  ]> {
+  ], HasSideEffect> {
   let summary = "Runtime Assertion";
   let arguments = (ins
     Torch_BoolType:$condition,
@@ -1188,7 +1190,7 @@ def Torch_RuntimeAssertOp: Torch_Op<"runtime.assert", [
 //===----------------------------------------------------------------------===//
 
 def Torch_ShapeCalculateOp : Torch_Op<"shape.calculate", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>]> {
+  DeclareOpInterfaceMethods<RegionBranchOpInterface>], HasSideEffect> {
   let summary = "Shape calculation encapsulation op";
   let description = [{
     The `torch.shape.calculate` op captures a shape calculation
@@ -1223,7 +1225,7 @@ def Torch_ShapeCalculateOp : Torch_Op<"shape.calculate", [
 def Torch_ShapeCalculateYieldOp : Torch_Op<"shape.calculate.yield", [
     Terminator,
     ReturnLike,
-    HasParent<"::mlir::torch::Torch::ShapeCalculateOp">]> {
+    HasParent<"::mlir::torch::Torch::ShapeCalculateOp">], HasSideEffect> {
   let summary = "yield-like terminator for torch.shape.calculate";
   let description = [{
     This op terminates the `body` region of a `torch.shape.calculate` op.
@@ -1244,7 +1246,7 @@ def Torch_ShapeCalculateYieldShapesOp : Torch_Op<"shape.calculate.yield.shapes",
     Terminator,
     HasValueSemantics,
     ReadOnly,
-    HasParent<"::mlir::torch::Torch::ShapeCalculateOp">]> {
+    HasParent<"::mlir::torch::Torch::ShapeCalculateOp">], HasSideEffect> {
   let summary = "yield-like terminator for torch.shape.calculate shape region";
   let description = [{
     This op terminates the `shapeCalculation` region of a
@@ -1268,7 +1270,7 @@ def Torch_ShapeCalculateYieldShapesOp : Torch_Op<"shape.calculate.yield.shapes",
 //===----------------------------------------------------------------------===//
 
 def Torch_DtypeCalculateOp : Torch_Op<"dtype.calculate", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>]> {
+  DeclareOpInterfaceMethods<RegionBranchOpInterface>], HasSideEffect> {
   let summary = "Dtype calculation encapsulation op";
   let description = [{
     The `torch.dtype.calculate` op captures a dtype calculation
@@ -1303,7 +1305,7 @@ def Torch_DtypeCalculateOp : Torch_Op<"dtype.calculate", [
 def Torch_DtypeCalculateYieldOp : Torch_Op<"dtype.calculate.yield", [
     Terminator,
     ReturnLike,
-    HasParent<"::mlir::torch::Torch::DtypeCalculateOp">]> {
+    HasParent<"::mlir::torch::Torch::DtypeCalculateOp">], HasSideEffect> {
   let summary = "yield-like terminator for torch.dtype.calculate";
   let description = [{
     This op terminates the `body` region of a `torch.dtype.calculate` op.
@@ -1324,7 +1326,7 @@ def Torch_DtypeCalculateYieldDtypesOp : Torch_Op<"dtype.calculate.yield.dtypes",
     Terminator,
     HasValueSemantics,
     ReadOnly,
-    HasParent<"::mlir::torch::Torch::DtypeCalculateOp">]> {
+    HasParent<"::mlir::torch::Torch::DtypeCalculateOp">], HasSideEffect> {
   let summary = "yield-like terminator for torch.dtype.calculate shape region";
   let description = [{
     This op terminates the `dtypeCalculation` region of a
@@ -1380,7 +1382,7 @@ def Torch_SymbolicIntOp : Torch_Op<"symbolic_int", [Pure]> {
   }];
 }
 
-def Torch_BindSymbolicShapeOp : Torch_Op<"bind_symbolic_shape", []> {
+def Torch_BindSymbolicShapeOp : Torch_Op<"bind_symbolic_shape", [], HasSideEffect> {
   let summary = "Binds shape expressions to tensors using an affine map indexed by shape symbols";
   let description = [{
     The `torch.bind_symbolic_shape` operation binds shape expressions
