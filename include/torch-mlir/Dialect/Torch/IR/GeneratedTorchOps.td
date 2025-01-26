@@ -14565,7 +14565,7 @@ def Torch_Aten__Getitem__DictStrOp : Torch_Op<"aten.__getitem__.Dict_str", [
 
 def Torch_Aten_SetItemStrOp : Torch_Op<"aten._set_item.str", [
     AllowsTypeRefinement
-  ]> {
+  ], HasSideEffect> {
   let summary = "Generated op for `aten::_set_item.str : (Dict(str, t), str, t) -> ()`";
   let arguments = (ins
     Torch_DictType:$l,
@@ -14633,7 +14633,7 @@ def Torch_AtenGetDefaultStrOp : Torch_Op<"aten.get.default_str", [
 
 def Torch_AtenDeleteDictStrOp : Torch_Op<"aten.Delete.Dict_str", [
     AllowsTypeRefinement
-  ]> {
+  ], HasSideEffect> {
   let summary = "Generated op for `aten::Delete.Dict_str : (Dict(str, t), str) -> ()`";
   let arguments = (ins
     Torch_DictType:$self,
@@ -14750,7 +14750,7 @@ def Torch_AtenColumnStackOp : Torch_Op<"aten.column_stack", [
 
 def Torch_AtenAppendTOp : Torch_Op<"aten.append.t", [
     AllowsTypeRefinement
-  ]> {
+  ], HasSideEffect> {
   let summary = "Generated op for `aten::append.t : (t[], t) -> (t[])`";
   let arguments = (ins
     AnyTorchListType:$self,
@@ -14872,7 +14872,7 @@ def Torch_AtenSliceTOp : Torch_Op<"aten.slice.t", [
 
 def Torch_AtenInsertTOp : Torch_Op<"aten.insert.t", [
     AllowsTypeRefinement
-  ]> {
+  ], HasSideEffect> {
   let summary = "Generated op for `aten::insert.t : (t[], int, t) -> ()`";
   let arguments = (ins
     AnyTorchListType:$self,
@@ -14942,7 +14942,7 @@ def Torch_AtenAnyBoolOp : Torch_Op<"aten.any.bool", [
 
 def Torch_AtenSortIntOp : Torch_Op<"aten.sort.int", [
     AllowsTypeRefinement
-  ]> {
+  ], HasSideEffect> {
   let summary = "Generated op for `aten::sort.int : (int[], bool) -> ()`";
   let arguments = (ins
     AnyTorchListOfTorchIntType:$self,
@@ -15344,7 +15344,7 @@ def Torch_AtenWarnOp : Torch_Op<"aten.warn", [
     AllowsTypeRefinement,
     HasValueSemantics,
     ReadOnly
-  ]> {
+  ], HasSideEffect> {
   let summary = "Generated op for `aten::warn : (str, int) -> ()`";
   let arguments = (ins
     Torch_StringType:$message,
@@ -16549,7 +16549,7 @@ def Torch_Aten__Getitem__TOp : Torch_Op<"aten.__getitem__.t", [
 
 def Torch_Aten_SetItemTOp : Torch_Op<"aten._set_item.t", [
     AllowsTypeRefinement
-  ]> {
+  ], HasSideEffect> {
   let summary = "Generated op for `aten::_set_item.t : (t[], int, t) -> (t[])`";
   let arguments = (ins
     AnyTorchListType:$l,
@@ -17742,7 +17742,7 @@ def Torch_PrimRaiseExceptionOp : Torch_Op<"prim.RaiseException", [
     AllowsTypeRefinement,
     HasValueSemantics,
     ReadOnly
-  ]> {
+  ], HasSideEffect> {
   let summary = "Generated op for `prim::RaiseException : (str, str?) -> ()`";
   let arguments = (ins
     Torch_StringType:$msg,
@@ -17812,7 +17812,7 @@ def Torch_PrimUncheckedCastOp : Torch_Op<"prim.unchecked_cast", [
 def Torch_PrimPrintOp : Torch_Op<"prim.Print", [
     AllowsTypeRefinement,
     ReadOnly
-  ]> {
+  ], HasSideEffect> {
   let summary = "Generated op for `prim::Print : (...) -> ()`";
   let arguments = (ins
     Variadic<AnyTorchType>:$operands
