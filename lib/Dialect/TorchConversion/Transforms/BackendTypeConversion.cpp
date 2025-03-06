@@ -168,11 +168,12 @@ void mlir::torch::TorchConversion::setupBackendTypeConversion(
     if (!builtinType)
       return std::nullopt;
 
-    // convert any integer type to signless
     if (type.getDtype().isInteger()) {
       return builtinType.clone(IntegerType::get(
           builtinType.getContext(), type.getDtype().getIntOrFloatBitWidth(),
-          IntegerType::Signless));
+          // convert signed integer type to signless, keep unsigned as unsigned
+          type.getDtype().isUnsignedInteger() ? IntegerType::Unsigned
+                                              : IntegerType::Signless));
     }
 
     return builtinType;
