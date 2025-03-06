@@ -10,6 +10,13 @@ func.func @identity(%arg0: !torch.vtensor<[],f32>) -> !torch.vtensor<[],f32> {
   return %arg0 : !torch.vtensor<[],f32>
 }
 
+// CHECK-LABEL:   func.func @identity_unsigned_int(
+// CHECK-SAME:                   %[[ARG:.*]]: tensor<ui64>) -> tensor<ui64> {
+// CHECK:           return %[[ARG]] : tensor<ui64>
+func.func @identity_unsigned_int(%arg0: !torch.vtensor<[],ui64>) -> !torch.vtensor<[],ui64> {
+  return %arg0 : !torch.vtensor<[],ui64>
+}
+
 // CHECK-LABEL:   func.func @block_arguments(
 // CHECK-SAME:        %[[ARG:.*]]: tensor<f32>) -> tensor<f32> {
 // CHECK:           cf.br ^bb1(%[[ARG]] : tensor<f32>)
