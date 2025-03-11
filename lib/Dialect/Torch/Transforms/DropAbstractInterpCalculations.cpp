@@ -48,9 +48,8 @@ class DropAbstractInterpCalculationsPass
     patterns.insert<DropCalculateOp<DtypeCalculateOp>>(context);
     patterns.insert<DropCalculateOp<ShapeCalculateOp>>(context);
     ConversionTarget target(*context);
-    target.addLegalDialect<Torch::TorchDialect>();
+    target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
     target.addIllegalOp<DtypeCalculateOp, ShapeCalculateOp>();
-    target.addLegalOp<func::FuncOp>();
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns)))) {
