@@ -348,10 +348,11 @@ public:
 std::unique_ptr<OperationPass<ModuleOp>>
 mlir::torch::Torch::createLowerToBackendContractPass(
     int maxIterations, bool decompose, bool shapeDtypeRefine,
-    ArrayRef<std::string> backendLegalOps, StringRef extraLibrary, bool refinePublicReturn) {
+    ArrayRef<std::string> backendLegalOps, StringRef extraLibrary,
+    bool refinePublicReturn) {
   return std::make_unique<LowerToBackendContractPass>(
-      maxIterations, decompose, shapeDtypeRefine, backendLegalOps,
-      extraLibrary, refinePublicReturn);
+      maxIterations, decompose, shapeDtypeRefine, backendLegalOps, extraLibrary,
+      refinePublicReturn);
 }
 
 std::unique_ptr<OperationPass<ModuleOp>>
@@ -497,6 +498,7 @@ static void markDecomposedOpsAsIllegal(MLIRContext *context,
   target.addIllegalOp<AtenMishOp>();
   target.addIllegalOp<AtenFullLikeOp>();
   target.addIllegalOp<AtenNewFullOp>();
+  target.addIllegalOp<AtenIndexAddOp>();
   target.addIllegalOp<AtenExpandAsOp>();
   target.addIllegalOp<Aten_ToCopyOp>();
   target.addIllegalOp<AtenDropoutOp>();
