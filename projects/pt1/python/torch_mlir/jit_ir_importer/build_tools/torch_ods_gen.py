@@ -1282,6 +1282,14 @@ def emit_ops(emitter_td: TextEmitter, registry: Registry):
     )
     emit("torchvision::nms : (Tensor, Tensor, float) -> (Tensor)")
 
+    # ==========================================================================
+    # `quant::` namespace.
+    # ==========================================================================
+
+    emit(
+        "quant::quantize_affine : (Tensor, int[], Tensor, Tensor?, int, Scalar?, Scalar?, str) -> (Tensor)"
+    )
+
 
 def dump_registered_ops(outfile: TextIO, registry: Registry):
     for _, v in sorted(registry.by_unique_key.items()):
@@ -1302,6 +1310,7 @@ def main(args: argparse.Namespace):
     _maybe_import_op_extensions(args)
     # importing torchvision will register torchvision ops with the JITOperatorRegistry
     import torchvision
+    import torchao
 
     registry = Registry.load()
     if args.debug_registry_dump:

@@ -18325,3 +18325,33 @@ def Torch_TorchvisionNmsOp : Torch_Op<"torchvision.nms", [
   }];
 }
 
+def Torch_QuantQuantizeAffineOp : Torch_Op<"quant.quantize_affine", [
+    AllowsTypeRefinement,
+    HasValueSemantics,
+    ReadOnly
+  ]> {
+  let summary = "Generated op for `quant::quantize_affine : (Tensor, int[], Tensor, Tensor?, int, Scalar?, Scalar?, str) -> (Tensor)`";
+  let arguments = (ins
+    AnyTorchTensorType:$input,
+    AnyTorchListOfTorchIntType:$block_size,
+    AnyTorchTensorType:$scale,
+    AnyTorchOptionalTensorType:$zero_point,
+    Torch_IntType:$output_dtype,
+    AnyTorchOptionalScalarType:$quant_min,
+    AnyTorchOptionalScalarType:$quant_max,
+    Torch_StringType:$zero_point_domain
+  );
+  let results = (outs
+    AnyTorchOptionalTensorType:$result
+  );
+  let hasCustomAssemblyFormat = 1;
+  let extraClassDefinition = [{
+    ParseResult QuantQuantizeAffineOp::parse(OpAsmParser &parser, OperationState &result) {
+      return parseDefaultTorchOp(parser, result, 8, 1);
+    }
+    void QuantQuantizeAffineOp::print(OpAsmPrinter &printer) {
+      printDefaultTorchOp(printer, *this, 8, 1);
+    }
+  }];
+}
+

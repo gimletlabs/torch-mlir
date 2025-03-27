@@ -8,6 +8,7 @@ import argparse
 import os
 
 import torch
+import torchao
 from torch import device
 import torch.jit._shape_functions as upstream_shape_functions
 
@@ -104,6 +105,40 @@ def torchvision〇nms〡shape(dets: List[int], scores: List[int], iou_threshold:
 
 def torchvision〇nms〡dtype(dets_rank_dtype: Tuple[int, int], scores_rank_dtype: Tuple[int, int], iou_threshold: float) -> int:
     return torch.int
+
+
+
+QUANT_QUANTIZE_AFFINE_TESTS = [
+    Invocation(
+        TensorOfShape(2, 3, 4, dtype=torch.float32),  # input
+        [2, 3, 4],  # block_size
+        TensorOfShape(dtype=torch.float32),  # scale
+        TensorOfShape(dtype=torch.int32),  # zero_point
+        torch.float8_e4m3fn,  # output_dtype
+        -448,  # quant_min
+        448,  # quant_max
+        "INT"  # zero_point_domain
+    ),
+    Invocation(
+        TensorOfShape(1, 10, 10, dtype=torch.float32),  # input
+        [1, 10, 10],  # block_size
+        TensorOfShape(dtype=torch.float16),  # scale
+        TensorOfShape(dtype=torch.int32),  # zero_point
+        torch.float8_e4m3fn,  # output_dtype
+        -448,  # quant_min
+        448,  # quant_max
+        "INT"  # zero_point_domain
+    ),
+]
+@check_shape_function(QUANT_QUANTIZE_AFFINE_TESTS)
+def quant〇quantize_affine〡shape(input: List[int], block_size: List[int], scale: List[int], zero_point: Optional[List[int]], output_dtype: int, quant_min: Optional[float] = None, quant_max: Optional[float] = None, zero_point_domain: str = "INT") -> List[int]:
+    return input
+
+@check_dtype_function(QUANT_QUANTIZE_AFFINE_TESTS)
+def quant〇quantize_affine〡dtype(input_rank_dtype: Tuple[int, int], block_size: List[int], scale_rank_dtype: Tuple[int, int], zero_point_rank_dtype: Optional[Tuple[int, int]], output_dtype: int, quant_min: Optional[Union[int, float, complex]] = None, quant_max: Optional[Union[int, float, complex]] = None, zero_point_domain: str = "INT") -> int:
+    return output_dtype
+
+
 
 @check_shape_function([
     Invocation(TensorOfShape(2, 3, 4)), # Basic case.
@@ -5847,6 +5882,7 @@ def main(args):
     _maybe_import_op_extensions(args)
     # importing torchvision will register torchvision ops with the JITOperatorRegistry
     import torchvision
+    import torchao
 
     asm = generate_library(globals())
     # We're about to put quotes around the string, so escape the `"` characters.
