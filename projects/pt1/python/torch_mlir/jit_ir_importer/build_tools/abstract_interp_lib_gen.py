@@ -853,6 +853,9 @@ def aten〇dot〡shape(self: List[int], tensor: List[int]) -> List[int]:
 def aten〇matmul〡shape(self: List[int], other: List[int]) -> List[int]:
     return upstream_shape_functions.matmul(self, other)
 
+def aten〇_scaled_mm〡shape(self: List[int], mat2: List[int], scale_a: List[int], scale_b: List[int], bias: Optional[List[int]] = None, scale_result: Optional[List[int]] = None, out_dtype: Optional[int] = None, use_fast_accum: bool = False) -> List[int]:
+    return upstream_shape_functions.matmul(self, mat2)
+
 def aten〇mv〡shape(self: List[int], vec: List[int]) -> List[int]:
     return upstream_shape_functions.mv(self, vec)
 
@@ -4197,6 +4200,19 @@ def aten〇matmul〡dtype(self_rank_dtype: Tuple[int, int], other_rank_dtype: Tu
     other_priority = get_priority_of_dtype(other_dtype)
     self_priority = get_priority_of_dtype(self_dtype)
     return other_dtype if other_priority < self_priority else self_dtype
+
+@check_dtype_function(
+    [Invocation(TensorOfShape(16, 16, dtype=torch.float8_e4m3fn),
+                TensorOfShape(16, 16, dtype=torch.float8_e4m3fn, transpose=True),
+                TensorOfShape(1, dtype=torch.float32),
+                TensorOfShape(1, dtype=torch.float32)),
+    Invocation(TensorOfShape(16, 16, dtype=torch.float8_e4m3fn),
+                TensorOfShape(16, 16, dtype=torch.float8_e4m3fn, transpose=True),
+                TensorOfShape(1, dtype=torch.float32),
+                TensorOfShape(1, dtype=torch.float32), None, None, torch.float32)])
+
+def aten〇_scaled_mm〡dtype(self_rank_dtype: Tuple[int, int], mat2_rank_dtype: Tuple[int, int], scale_a_rank_dtype: Tuple[int, int], scale_b_rank_dtype: Tuple[int, int], bias_rank_dtype: Optional[Tuple[int, int]] = None, scale_result_rank_dtype: Optional[Tuple[int, int]] = None, out_dtype: Optional[int] = None, use_fast_accum: bool = False) -> int:
+    return torch.float8_e4m3fn if out_dtype is None else out_dtype
 
 @check_dtype_function(_check_two_tensor_op())
 def aten〇maximum〡dtype(self_rank_dtype: Tuple[int, int], other_rank_dtype: Tuple[int, int]) -> int:
