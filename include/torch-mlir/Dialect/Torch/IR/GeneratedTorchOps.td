@@ -18385,3 +18385,34 @@ def Torch_QuantQuantizeAffineOp : Torch_Op<"quant.quantize_affine", [
   }];
 }
 
+def Torch_QuantDequantizeAffineOp : Torch_Op<"quant.dequantize_affine", [
+    AllowsTypeRefinement,
+    HasValueSemantics,
+    ReadOnly
+  ]> {
+  let summary = "Generated op for `quant::dequantize_affine : (Tensor, int[], Tensor, Tensor?, int, Scalar?, Scalar?, str?, int) -> (Tensor)`";
+  let arguments = (ins
+    AnyTorchTensorType:$input,
+    AnyTorchListOfTorchIntType:$block_size,
+    AnyTorchTensorType:$scale,
+    AnyTorchOptionalTensorType:$zero_point,
+    Torch_IntType:$input_dtype,
+    AnyTorchOptionalScalarType:$quant_min,
+    AnyTorchOptionalScalarType:$quant_max,
+    AnyTorchOptionalStringType:$zero_point_domain,
+    Torch_IntType:$output_dtype
+  );
+  let results = (outs
+    AnyTorchOptionalTensorType:$result
+  );
+  let hasCustomAssemblyFormat = 1;
+  let extraClassDefinition = [{
+    ParseResult QuantDequantizeAffineOp::parse(OpAsmParser &parser, OperationState &result) {
+      return parseDefaultTorchOp(parser, result, 9, 1);
+    }
+    void QuantDequantizeAffineOp::print(OpAsmPrinter &printer) {
+      printDefaultTorchOp(printer, *this, 9, 1);
+    }
+  }];
+}
+

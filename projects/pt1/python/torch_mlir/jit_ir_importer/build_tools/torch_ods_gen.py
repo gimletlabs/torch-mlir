@@ -1292,6 +1292,9 @@ def emit_ops(emitter_td: TextEmitter, registry: Registry):
     emit(
         "quant::quantize_affine : (Tensor, int[], Tensor, Tensor?, int, Scalar?, Scalar?, str) -> (Tensor)"
     )
+    emit(
+        "quant::dequantize_affine : (Tensor, int[], Tensor, Tensor?, int, Scalar?, Scalar?, str?, int) -> (Tensor)"
+    )
 
 
 def dump_registered_ops(outfile: TextIO, registry: Registry):
