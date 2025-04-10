@@ -138,6 +138,31 @@ def quant〇quantize_affine〡shape(input: List[int], block_size: List[int], sca
 def quant〇quantize_affine〡dtype(input_rank_dtype: Tuple[int, int], block_size: List[int], scale_rank_dtype: Tuple[int, int], zero_point_rank_dtype: Optional[Tuple[int, int]], output_dtype: int, quant_min: Optional[Union[int, float, complex]] = None, quant_max: Optional[Union[int, float, complex]] = None, zero_point_domain: str = "INT") -> int:
     return output_dtype
 
+QUANT_DEQUANTIZE_AFFINE_TESTS = [
+    Invocation(
+        TensorOfShape(2, 3, 4, dtype=torch.float8_e4m3fn), # input
+        [2, 3, 4], # block_size
+        TensorOfShape(dtype=torch.float32), # scale
+        TensorOfShape(dtype=torch.int32), # zero_point
+        torch.float8_e4m3fn, # input_dtype
+        -448, # quant_min
+        448, # quant_max
+        "INT", # zero_point_domain
+        torch.float32 # output_dtype
+    )
+]
+
+# Use a constant to silence the function signature matching error.
+INT = "INT"
+@check_shape_function(QUANT_DEQUANTIZE_AFFINE_TESTS)
+def quant〇dequantize_affine〡shape(input: List[int], block_size: List[int], scale: List[int], zero_point: Optional[List[int]], input_dtype: int, quant_min: Optional[float] = None, quant_max: Optional[float] = None, zero_point_domain: Optional[str] = INT, output_dtype: int = 6) -> List[int]:
+    return input
+
+@check_dtype_function(QUANT_DEQUANTIZE_AFFINE_TESTS)
+def quant〇dequantize_affine〡dtype(input_rank_dtype: Tuple[int, int], block_size: List[int], scale_rank_dtype: Tuple[int, int], zero_point_rank_dtype: Optional[Tuple[int, int]], input_dtype: int, quant_min: Optional[Union[int, float, complex]] = None, quant_max: Optional[Union[int, float, complex]] = None, zero_point_domain: Optional[str] = INT, output_dtype: int = 6) -> int:
+    return output_dtype
+
+
 
 
 @check_shape_function([
