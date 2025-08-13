@@ -35,6 +35,9 @@ struct TorchMemoryEffectImplTrait
                  &effects) {
     auto *op = this->getOperation();
     for (auto &operand : op->getOpOperands()) {
+      if (!operand.get()) {
+        continue;
+      }
       if (operand.get()
               .getType()
               .template isa<torch::Torch::NonValueTensorType>()) {
