@@ -36,4 +36,3 @@ def _fused_moe_meta(input, w13, w2, expert_indices, expert_weights):
 def _fused_moe_cpu(input, w13, w2, expert_indices, expert_weights):
     # CPU stub for safety in case CPU is used; maintain shape/dtype.
     return torch.empty_like(input)
-
