@@ -1299,6 +1299,11 @@ def emit_ops(emitter_td: TextEmitter, registry: Registry):
     emit(
         "quant::dequantize_affine : (Tensor, int[], Tensor, Tensor?, int, Scalar?, Scalar?, str?, int) -> (Tensor)"
     )
+    # ==========================================================================
+    # `gml::` namespace.
+    # ==========================================================================
+
+    emit("gml::fused_moe : (Tensor, Tensor, Tensor, Tensor, Tensor) -> (Tensor)")
 
 
 def dump_registered_ops(outfile: TextIO, registry: Registry):
@@ -1321,6 +1326,7 @@ def main(args: argparse.Namespace):
     # importing torchvision will register torchvision ops with the JITOperatorRegistry
     import torchvision
     import torchao
+    import torch_mlir.gml_ops
 
     registry = Registry.load()
     if args.debug_registry_dump:

@@ -18444,3 +18444,30 @@ def Torch_QuantDequantizeAffineOp : Torch_Op<"quant.dequantize_affine", [
   }];
 }
 
+def Torch_GmlFusedMoeOp : Torch_Op<"gml.fused_moe", [
+    AllowsTypeRefinement,
+    HasValueSemantics,
+    ReadOnly
+  ]> {
+  let summary = "Generated op for `gml::fused_moe : (Tensor, Tensor, Tensor, Tensor, Tensor) -> (Tensor)`";
+  let arguments = (ins
+    AnyTorchTensorType:$input,
+    AnyTorchTensorType:$w13,
+    AnyTorchTensorType:$w2,
+    AnyTorchTensorType:$expert_indices,
+    AnyTorchTensorType:$expert_weights
+  );
+  let results = (outs
+    AnyTorchOptionalTensorType:$result
+  );
+  let hasCustomAssemblyFormat = 1;
+  let extraClassDefinition = [{
+    ParseResult GmlFusedMoeOp::parse(OpAsmParser &parser, OperationState &result) {
+      return parseDefaultTorchOp(parser, result, 5, 1);
+    }
+    void GmlFusedMoeOp::print(OpAsmPrinter &printer) {
+      printDefaultTorchOp(printer, *this, 5, 1);
+    }
+  }];
+}
+

@@ -15,6 +15,9 @@ src_dir="$(realpath "$(dirname "$0")"/..)"
 build_dir="$(realpath "${TORCH_MLIR_BUILD_DIR:-$src_dir/build}")"
 torch_ir_include_dir="${src_dir}/include/torch-mlir/Dialect/Torch/IR"
 
+gml_ops_dir="$(realpath "${src_dir}/projects/pt1/python")"
+gml_ops_module="torch_mlir.gml_ops"
+
 in_tree_pkg_dir="${build_dir}/tools/torch-mlir/python_packages"
 out_of_tree_pkg_dir="${build_dir}/python_packages"
 
@@ -31,14 +34,15 @@ else
 fi
 
 TORCH_MLIR_EXT_PYTHONPATH="${TORCH_MLIR_EXT_PYTHONPATH:-""}"
-pypath="${python_packages_dir}/torch_mlir"
+pypath="${python_packages_dir}/torch_mlir:${gml_ops_dir}"
 if [ ! -z ${TORCH_MLIR_EXT_PYTHONPATH} ]; then
   pypath="${pypath}:${TORCH_MLIR_EXT_PYTHONPATH}"
 fi
+
 TORCH_MLIR_EXT_MODULES="${TORCH_MLIR_EXT_MODULES:-""}"
-ext_module="${ext_module:-""}"
+ext_module="${gml_ops_module}"
 if [ ! -z ${TORCH_MLIR_EXT_MODULES} ]; then
-  ext_module="${TORCH_MLIR_EXT_MODULES}"
+  ext_module="${TORCH_MLIR_EXT_MODULES},${ext_module}"
 fi
 
 set +u
