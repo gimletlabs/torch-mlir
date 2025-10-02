@@ -18449,12 +18449,12 @@ def Torch_GmlFusedMoeOp : Torch_Op<"gml.fused_moe", [
     HasValueSemantics,
     ReadOnly
   ]> {
-  let summary = "Generated op for `gml::fused_moe : (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor) -> (Tensor)`";
+  let summary = "Generated op for `gml::fused_moe : (Tensor, Tensor[], Tensor[], Tensor[], Tensor, Tensor) -> (Tensor)`";
   let arguments = (ins
     AnyTorchTensorType:$input,
-    AnyTorchTensorType:$w1,
-    AnyTorchTensorType:$w2,
-    AnyTorchTensorType:$w3,
+    AnyTorchListOfTensorType:$w1,
+    AnyTorchListOfTensorType:$w2,
+    AnyTorchListOfTensorType:$w3,
     AnyTorchTensorType:$expert_indices,
     AnyTorchTensorType:$expert_weights
   );
