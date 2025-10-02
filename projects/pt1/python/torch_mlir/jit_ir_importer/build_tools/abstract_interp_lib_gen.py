@@ -5912,9 +5912,10 @@ def aten〇unfold〡dtype(self_rank_dtype: Tuple[int, int], dimension: int, size
 
 GML_MOE_OP_TESTS = [
     Invocation(
-        TensorOfShape(128, 768, dtype=torch.float32), # input [num_tokens, hidden_size]
-        TensorOfShape(8, 768, 6144, dtype=torch.float32), # w13 [num_experts, hidden_size, 2*inter_size]
-        TensorOfShape(8, 3072, 768, dtype=torch.float32), # w2 [num_experts, inter_size, hidden_size]
+        TensorOfShape(128, 2048, dtype=torch.float32), # input [num_tokens, hidden_size]
+        TensorOfShape(8, 768, 2048, dtype=torch.float32), # w1 [num_experts, inter_size, hidden_size]
+        TensorOfShape(8, 2048, 768, dtype=torch.float32), # w2 [num_experts, hidden_size, inter_size]
+        TensorOfShape(8, 768, 2048, dtype=torch.float32), # w3 [num_experts, inter_size, hidden_size]
         TensorOfShape(128, 2, dtype=torch.int32), # expert_indices [num_tokens, top_k]
         TensorOfShape(128, 2, dtype=torch.float32), # expert_weights [num_tokens, top_k]
     )
@@ -5922,12 +5923,12 @@ GML_MOE_OP_TESTS = [
 
 # Use a constant to silence the function signature matching error.
 @check_shape_function(GML_MOE_OP_TESTS)
-def gml〇fused_moe〡shape(input: List[int], w13: List[int], w2: List[int], expert_indices: List[int], expert_weights: List[int]) -> List[int]:
+def gml〇fused_moe〡shape(input: List[int], w1: List[int], w2: List[int], w3: List[int], expert_indices: List[int], expert_weights: List[int]) -> List[int]:
     # MoE output has same shape as input: [num_tokens, hidden_size]
     return input
 
 @check_dtype_function(GML_MOE_OP_TESTS)
-def gml〇fused_moe〡dtype(input_rank_dtype: Tuple[int, int], w13_rank_dtype: Tuple[int, int], w2_rank_dtype: Tuple[int, int], expert_indices_rank_dtype: Tuple[int, int], expert_weights_rank_dtype: Tuple[int, int]) -> int:
+def gml〇fused_moe〡dtype(input_rank_dtype: Tuple[int, int], w1_rank_dtype: Tuple[int, int], w2_rank_dtype: Tuple[int, int], w3_rank_dtype: Tuple[int, int], expert_indices_rank_dtype: Tuple[int, int], expert_weights_rank_dtype: Tuple[int, int]) -> int:
     _, input_dtype = input_rank_dtype
     return input_dtype
 
