@@ -18449,14 +18449,15 @@ def Torch_GmlFusedMoeOp : Torch_Op<"gml.fused_moe", [
     HasValueSemantics,
     ReadOnly
   ]> {
-  let summary = "Generated op for `gml::fused_moe : (Tensor, Tensor[], Tensor[], Tensor[], Tensor, Tensor) -> (Tensor)`";
+  let summary = "Generated op for `gml::fused_moe : (Tensor, Tensor[], Tensor[], Tensor[], Tensor, Tensor, str) -> (Tensor)`";
   let arguments = (ins
     AnyTorchTensorType:$input,
-    AnyTorchListOfTensorType:$w1,
-    AnyTorchListOfTensorType:$w2,
-    AnyTorchListOfTensorType:$w3,
+    AnyTorchListOfTensorType:$gate_proj,
+    AnyTorchListOfTensorType:$down_proj,
+    AnyTorchListOfTensorType:$up_proj,
     AnyTorchTensorType:$expert_indices,
-    AnyTorchTensorType:$expert_weights
+    AnyTorchTensorType:$expert_weights,
+    Torch_StringType:$hidden_act
   );
   let results = (outs
     AnyTorchOptionalTensorType:$result
@@ -18464,10 +18465,10 @@ def Torch_GmlFusedMoeOp : Torch_Op<"gml.fused_moe", [
   let hasCustomAssemblyFormat = 1;
   let extraClassDefinition = [{
     ParseResult GmlFusedMoeOp::parse(OpAsmParser &parser, OperationState &result) {
-      return parseDefaultTorchOp(parser, result, 6, 1);
+      return parseDefaultTorchOp(parser, result, 7, 1);
     }
     void GmlFusedMoeOp::print(OpAsmPrinter &printer) {
-      printDefaultTorchOp(printer, *this, 6, 1);
+      printDefaultTorchOp(printer, *this, 7, 1);
     }
   }];
 }

@@ -12,13 +12,13 @@ _lib = Library("gml", "DEF")
 
 # Signature sources:
 # input: Tensor[num_tokens, hidden_size]
-# w1: Tensor[num_experts, inter_size, hidden_size]
-# w2: Tensor[num_experts, hidden_size, inter_size]
-# w3: Tensor[num_experts, inter_size, hidden_size]
+# gate_proj: List of tensors per expert in the layer, each Tensor[inter_size, hidden_size]
+# down_proj: List of tensors per expert in the layer, each Tensor[hidden_size, inter_size]
+# up_proj: List of tensors per expert in the layer, each Tensor[inter_size, hidden_size]
 # expert_indices: Tensor[num_tokens, top_k], int32
 # expert_weights: Tensor[num_tokens, top_k], float32
 _lib.define(
-    "fused_moe(Tensor input, Tensor w1, Tensor w2, Tensor w3, Tensor expert_indices, Tensor expert_weights) -> Tensor"
+    "fused_moe(Tensor input, Tensor[] gate_proj, Tensor[] down_proj, Tensor[] up_proj, Tensor expert_indices, Tensor expert_weights, str hidden_act) -> Tensor"
 )
 
 
@@ -29,11 +29,15 @@ def _infer_output_like_input(input: torch.Tensor, *args, **kwargs):
 
 
 @impl("gml::fused_moe", "Meta")
-def _fused_moe_meta(input, w1, w2, w3, expert_indices, expert_weights):
+def _fused_moe_meta(
+    input, gate_proj, down_proj, up_proj, expert_indices, expert_weights, hidden_act
+):
     return _infer_output_like_input(input)
 
 
 @impl("gml::fused_moe", "CPU")
-def _fused_moe_cpu(input, w1, w2, w3, expert_indices, expert_weights):
+def _fused_moe_cpu(
+    input, gate_proj, down_proj, up_proj, expert_indices, expert_weights, hidden_act
+):
     # CPU stub for safety in case CPU is used; maintain shape/dtype.
     return torch.empty_like(input)
