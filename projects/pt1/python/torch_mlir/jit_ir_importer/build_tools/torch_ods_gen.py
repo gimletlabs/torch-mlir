@@ -1304,7 +1304,7 @@ def emit_ops(emitter_td: TextEmitter, registry: Registry):
     # ==========================================================================
 
     emit(
-        "gml::fused_moe : (Tensor, Tensor[], Tensor[], Tensor[], Tensor, Tensor) -> (Tensor)"
+        "gml::fused_moe : (Tensor, Tensor[], Tensor[], Tensor[], Tensor, Tensor, str) -> (Tensor)"
     )
 
 

@@ -5918,17 +5918,18 @@ GML_MOE_OP_TESTS = [
         [TensorOfShape(768, 2048, dtype=torch.float32)], # w3 list of [inter_size, hidden_size] per expert
         TensorOfShape(128, 2, dtype=torch.int32), # expert_indices [num_tokens, top_k]
         TensorOfShape(128, 2, dtype=torch.float32), # expert_weights [num_tokens, top_k]
+        "silu",
     )
 ]
 
 # Use a constant to silence the function signature matching error.
 @check_shape_function(GML_MOE_OP_TESTS)
-def gml〇fused_moe〡shape(input: List[int], w1: List[List[int]], w2: List[List[int]], w3: List[List[int]], expert_indices: List[int], expert_weights: List[int]) -> List[int]:
+def gml〇fused_moe〡shape(input: List[int], gate_proj: List[List[int]], down_proj: List[List[int]], up_proj: List[List[int]], expert_indices: List[int], expert_weights: List[int], hidden_act: str) -> List[int]:
     # MoE output has same shape as input: [num_tokens, hidden_size]
     return input
 
 @check_dtype_function(GML_MOE_OP_TESTS)
-def gml〇fused_moe〡dtype(input_rank_dtype: Tuple[int, int], w1_rank_dtype: List[Tuple[int, int]], w2_rank_dtype: List[Tuple[int, int]], w3_rank_dtype: List[Tuple[int, int]], expert_indices_rank_dtype: Tuple[int, int], expert_weights_rank_dtype: Tuple[int, int]) -> int:
+def gml〇fused_moe〡dtype(input_rank_dtype: Tuple[int, int], gate_proj_rank_dtype: List[Tuple[int, int]], down_proj_rank_dtype: List[Tuple[int, int]], up_proj_rank_dtype: List[Tuple[int, int]], expert_indices_rank_dtype: Tuple[int, int], expert_weights_rank_dtype: Tuple[int, int], hidden_act: str) -> int:
     _, input_dtype = input_rank_dtype
     return input_dtype
 
