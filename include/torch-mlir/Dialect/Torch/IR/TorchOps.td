@@ -1408,4 +1408,45 @@ def Torch_BindSymbolicShapeOp : Torch_Op<"bind_symbolic_shape", [], HasSideEffec
   let hasVerifier = 1;
 }
 
+def Torch_GmlFusedMoeOp : Torch_Op<"gml.fused_moe", [
+    AllowsTypeRefinement,
+    HasValueSemantics,
+    ReadOnly
+  ]> {
+  let summary = "Stub op representing a fused Mixture-of-Experts (MoE) operation for GML.";
+
+  let description = [{
+    The `torch.gml.fused_moe` operation encapsulates the core computation of a Mixture-of-Experts (MoE) layer, combining gating, expert selection, and projection into a single high-level op. This operation is intended as a stub to be expanded by the compiler into lower-level operations for execution.
+
+    The op takes the following inputs:
+    - An input tensor to be processed by the MoE layer.
+    - Lists of tensors for gate projections, down projections, and up projections, which parameterize the gating and expert transformations.
+    - Tensors representing expert indices and expert weights, which determine the routing and weighting of input data to experts.
+    - A string attribute specifying the hidden activation function to be used within the experts.
+  }];
+  let arguments = (ins
+    AnyTorchTensorType:$input,
+    AnyTorchListOfTensorType:$gate_proj,
+    AnyTorchListOfTensorType:$down_proj,
+    AnyTorchListOfTensorType:$up_proj,
+    AnyTorchTensorType:$expert_indices,
+    AnyTorchTensorType:$expert_weights,
+    Torch_StringType:$hidden_act,
+    DefaultValuedAttr<StrAttr, "\"\"">:$hidden_act_attr
+  );
+  let results = (outs
+    AnyTorchOptionalTensorType:$result
+  );
+  let hasCustomAssemblyFormat = 1;
+  let hasCanonicalizer = 1;
+  let extraClassDefinition = [{
+    ParseResult GmlFusedMoeOp::parse(OpAsmParser &parser, OperationState &result) {
+      return parseDefaultTorchOp(parser, result, 7, 1);
+    }
+    void GmlFusedMoeOp::print(OpAsmPrinter &printer) {
+      printDefaultTorchOp(printer, *this, 7, 1);
+    }
+  }];
+}
+
 #endif // TORCH_OPS

@@ -1303,9 +1303,6 @@ def emit_ops(emitter_td: TextEmitter, registry: Registry):
     # `gml::` namespace.
     # ==========================================================================
 
-    emit(
-        "gml::fused_moe : (Tensor, Tensor[], Tensor[], Tensor[], Tensor, Tensor, str) -> (Tensor)"
-    )
 
 
 def dump_registered_ops(outfile: TextIO, registry: Registry):

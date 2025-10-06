@@ -682,6 +682,27 @@ static OpFoldResult atenIsOrIsNotFoldHelper(Operation *op, bool equalIsTrue) {
 }
 
 //===----------------------------------------------------------------------===//
+// GmlFusedMoeOp
+//===----------------------------------------------------------------------===//
+
+void GmlFusedMoeOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.add(+[](GmlFusedMoeOp op, PatternRewriter &rewriter) {
+    // If the attribute already exists, nothing to do.
+    if (op->getAttr("hidden_act_attr"))
+      return failure();
+    // If the hidden_act operand is defined by a constant.str, copy to attr.
+    if (auto cstr = op.getHiddenAct().getDefiningOp<ConstantStrOp>()) {
+      rewriter.modifyOpInPlace(op, [&]() {
+        op->setAttr("hidden_act_attr", cstr.getValueAttr());
+      });
+      return success();
+    }
+    return failure();
+  });
+}
+
+//===----------------------------------------------------------------------===//
 // Aten__RangeLengthOp
 //===----------------------------------------------------------------------===//
 
