@@ -16170,6 +16170,18 @@ StringRef mlir::torch::Torch::getAbstractInterpLibrary() {
 "    %0:2 = torch.prim.TupleUnpack %arg0 : !torch.tuple<int, int> -> !torch.int, !torch.int\n"
 "    return %0#1 : !torch.int\n"
 "  }\n"
+"  func.func @\"__torch_mlir_shape_fn.gml.quantize_affine\"(%arg0: !torch.list<int>, %arg1: !torch.list<int>, %arg2: !torch.list<int>, %arg3: !torch.list<int>, %arg4: !torch.int) -> !torch.list<int> {\n"
+"    return %arg0 : !torch.list<int>\n"
+"  }\n"
+"  func.func @\"__torch_mlir_dtype_fn.gml.quantize_affine\"(%arg0: !torch.tuple<int, int>, %arg1: !torch.list<int>, %arg2: !torch.tuple<int, int>, %arg3: !torch.tuple<int, int>, %arg4: !torch.int) -> !torch.int {\n"
+"    return %arg4 : !torch.int\n"
+"  }\n"
+"  func.func @\"__torch_mlir_shape_fn.gml.dequantize_affine\"(%arg0: !torch.list<int>, %arg1: !torch.list<int>, %arg2: !torch.list<int>, %arg3: !torch.list<int>, %arg4: !torch.int, %arg5: !torch.int) -> !torch.list<int> {\n"
+"    return %arg0 : !torch.list<int>\n"
+"  }\n"
+"  func.func @\"__torch_mlir_dtype_fn.gml.dequantize_affine\"(%arg0: !torch.tuple<int, int>, %arg1: !torch.list<int>, %arg2: !torch.tuple<int, int>, %arg3: !torch.tuple<int, int>, %arg4: !torch.int, %arg5: !torch.int) -> !torch.int {\n"
+"    return %arg5 : !torch.int\n"
+"  }\n"
 "}\n"
 "";
   // clang-format on
