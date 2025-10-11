@@ -88,3 +88,45 @@ def _dequantize_affine_meta(input, block_size, scale, zero_point, input_dtype, o
 def _dequantize_affine_cpu(input, block_size, scale, zero_point, input_dtype, output_dtype):
     # CPU stub for safety in case CPU is used; maintain shape with output_dtype.
     return torch.empty_like(input, dtype=output_dtype)
+
+# Dynamic scale op - dynamically computes quantization scale
+# Signature:
+# x: Tensor - input tensor to compute scale for
+# dtype: int - target dtype for quantization (e.g. torch.int8, torch.float8_e4m3fn)
+# symmetric: bool - whether to use symmetric quantization (default True)
+# strategy: int - quantization strategy level for scale computation (enum as int)
+#   Strategy values:
+#   0 = TENSOR: per-tensor quantization - returns scalar []
+#   1 = CHANNEL: per-channel quantization - returns [channels]
+#   2 = GROUP: per-group quantization - returns [num_groups]
+#   3 = BLOCK: block-wise quantization - returns block shape
+#   4 = TOKEN: per-token quantization - returns [num_tokens]
+#   5 = TENSOR_GROUP: tensor-group quantization
+#   6 = ATTN_HEAD: per-attention-head quantization - returns [num_heads]
+_lib.define(
+    "dynamic_scale(Tensor x, int dtype, bool symmetric=True, int strategy=0) -> Tensor"
+)
+
+
+@impl("gml::dynamic_scale", "Meta")
+def _dynamic_scale_meta(x, dtype, symmetric=True, strategy=0):
+    # Returns a tensor with scale values
+    # Scale dtype matches input dtype
+    if strategy == 0:  # TENSOR
+        return torch.empty([], dtype=x.dtype, device="meta")
+    elif strategy == 4:  # TOKEN
+        return torch.empty([x.shape[1]], dtype=x.dtype, device="meta")
+    else:
+        # For other strategies, return scalar for now
+        return torch.empty([], dtype=x.dtype, device="meta")
+
+
+@impl("gml::dynamic_scale", "CPU")
+def _dynamic_scale_cpu(x, dtype, symmetric=True, strategy=0):
+    # CPU stub
+    if strategy == 0:  # TENSOR
+        return torch.empty([], dtype=x.dtype)
+    elif strategy == 4:  # TOKEN
+        return torch.empty([x.shape[1]], dtype=x.dtype)
+    else:
+        return torch.empty([], dtype=x.dtype)

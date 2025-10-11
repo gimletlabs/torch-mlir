@@ -6013,6 +6013,62 @@ def gml〇dequantize_affine〡dtype(input_rank_dtype: Tuple[int, int], block_siz
     return output_dtype
 
 
+GML_DYNAMIC_SCALE_TESTS = [
+    # Per-tensor quantization scale (TENSOR strategy)
+    Invocation(
+        TensorOfShape(128, 768, dtype=torch.float32),  # x
+        torch.int8,  # dtype
+        True,  # symmetric
+        0,  # strategy (TENSOR)
+    ),
+    # Per-channel quantization scale (CHANNEL strategy)
+    Invocation(
+        TensorOfShape(256, 1024, dtype=torch.float16),  # x
+        torch.float8_e4m3fn,  # dtype
+        True,  # symmetric
+        1,  # strategy (CHANNEL)
+    ),
+    # Asymmetric per-tensor quantization
+    Invocation(
+        TensorOfShape(64, 512, dtype=torch.bfloat16),  # x
+        torch.uint8,  # dtype
+        False,  # symmetric
+        0,  # strategy (TENSOR)
+    ),
+    # Per-token quantization (TOKEN strategy)
+    Invocation(
+        TensorOfShape(1024, 2048, dtype=torch.float32),  # x [num_tokens, hidden_dim]
+        torch.int8,  # dtype
+        True,  # symmetric
+        4,  # strategy (TOKEN)
+    ),
+]
+
+@check_shape_function(GML_DYNAMIC_SCALE_TESTS)
+def gml〇dynamic_scale〡shape(x: List[int], dtype: int, symmetric: bool = True, strategy: int = 0) -> List[int]:
+    # Shape depends on strategy:
+    # - TENSOR (0): scalar []
+    # - CHANNEL (1): [channels] (not implemented yet)
+    # - GROUP (2): depends on group configuration (not implemented yet)
+    # - BLOCK (3): depends on block configuration (not implemented yet)
+    # - TOKEN (4): [num_tokens] = [x[0]]
+    # - TENSOR_GROUP (5): depends on tensor group (not implemented yet)
+    # - ATTN_HEAD (6): [num_heads] (not implemented yet)
+    if strategy == 0:  # TENSOR
+        return []
+    elif strategy == 4:  # TOKEN
+        return [x[0]]
+    else:
+        # For other strategies, return scalar for now
+        return []
+
+@check_dtype_function(GML_DYNAMIC_SCALE_TESTS)
+def gml〇dynamic_scale〡dtype(x_rank_dtype: Tuple[int, int], dtype: int, symmetric: bool = True, strategy: int = 0) -> int:
+    # Scale dtype matches input dtype
+    _, x_dtype = x_rank_dtype
+    return x_dtype
+
+
 # ==============================================================================
 # Main
 # ==============================================================================

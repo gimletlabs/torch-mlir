@@ -18528,3 +18528,28 @@ def Torch_GmlDequantizeAffineOp : Torch_Op<"gml.dequantize_affine", [
   }];
 }
 
+def Torch_GmlDynamicScaleOp : Torch_Op<"gml.dynamic_scale", [
+    AllowsTypeRefinement,
+    HasValueSemantics,
+    ReadOnly
+  ]> {
+  let summary = "Generated op for `gml::dynamic_scale : (Tensor, int, bool, int) -> (Tensor)`";
+  let arguments = (ins
+    AnyTorchTensorType:$x,
+    Torch_IntType:$dtype,
+    Torch_BoolType:$symmetric,
+    Torch_IntType:$strategy
+  );
+  let results = (outs
+    AnyTorchOptionalTensorType:$result
+  );
+  let hasCustomAssemblyFormat = 1;
+  let extraClassDefinition = [{
+    ParseResult GmlDynamicScaleOp::parse(OpAsmParser &parser, OperationState &result) {
+      return parseDefaultTorchOp(parser, result, 4, 1);
+    }
+    void GmlDynamicScaleOp::print(OpAsmPrinter &printer) {
+      printDefaultTorchOp(printer, *this, 4, 1);
+    }
+  }];
+}

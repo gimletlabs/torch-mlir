@@ -1312,6 +1312,9 @@ def emit_ops(emitter_td: TextEmitter, registry: Registry):
     emit(
         "gml::dequantize_affine : (Tensor, int[], Tensor, Tensor, int, int) -> (Tensor)"
     )
+    emit(
+        "gml::dynamic_scale : (Tensor, int, bool, int) -> (Tensor)"
+    )
 
 
 def dump_registered_ops(outfile: TextIO, registry: Registry):
