@@ -264,42 +264,68 @@ std::optional<Value> getConstTensor<float>(PatternRewriter &rewriter,
   return const_op.getResult();
 }
 
-static LogicalResult checkValidityOfCast(Type src, Type dest) {
+// Valid TOSA casting pairs according to TOSA spec:
+// https://www.mlplatform.org/tosa/tosa_spec.html#_cast
+// Note: currently TOSA doesn't support casting to and from I64 and F64
+[[maybe_unused]] static LogicalResult checkValidityOfCast(Type src, Type dest) {
   // clang-format off
   if ((src == dest) ||
-      // int64 -> *
-      (src.isInteger(64) && dest.isInteger(32)) ||
-      (src.isInteger(64) && dest.isInteger(8)) ||
-      (src.isInteger(64) && dest.isInteger(1)) ||
-      (src.isInteger(64) && dest.isF32()) ||
       // int32 -> *
-      (src.isInteger(32) && dest.isInteger(64)) ||
+      (src.isInteger(32) && dest.isInteger(16)) ||
+      (src.isInteger(32) && dest.isInteger(8)) ||
       (src.isInteger(32) && dest.isInteger(1)) ||
       (src.isInteger(32) && dest.isF32()) ||
+      (src.isInteger(32) && dest.isF16()) ||
       (src.isInteger(32) && dest.isBF16()) ||
       // int16 -> *
+      (src.isInteger(16) && dest.isInteger(32)) ||
+      (src.isInteger(16) && dest.isInteger(8)) ||
+      (src.isInteger(16) && dest.isInteger(1)) ||
       (src.isInteger(16) && dest.isBF16()) ||
+      (src.isInteger(16) && dest.isF32()) ||
+      (src.isInteger(16) && dest.isF16()) ||
       // int8 -> *
+      (src.isInteger(8) && dest.isInteger(32)) ||
+      (src.isInteger(8) && dest.isInteger(16)) ||
       (src.isInteger(8) && dest.isInteger(1)) ||
       (src.isInteger(8) && dest.isBF16()) ||
+      (src.isInteger(8) && dest.isF32()) ||
+      (src.isInteger(8) && dest.isF16()) ||
       // int1 -> *
-      (src.isInteger(1) && dest.isInteger(64)) ||
-      (src.isInteger(1) && dest.isF32()) ||
-      // f64 -> *
-      (src.isF64() && dest.isF32()) ||
-      (src.isF64() && dest.isBF16()) ||
+      (src.isInteger(1) && dest.isInteger(32)) ||
+      (src.isInteger(1) && dest.isInteger(16)) ||
+      (src.isInteger(1) && dest.isInteger(8)) ||
       // f32 -> *
-      (src.isF32() && dest.isF64()) ||
+      (src.isF32() && dest.isInteger(32)) ||
+      (src.isF32() && dest.isInteger(16)) ||
+      (src.isF32() && dest.isInteger(8)) ||
       (src.isF32() && dest.isBF16()) ||
       (src.isF32() && dest.isF16()) ||
-      (src.isF32() && dest.isInteger(8)) ||
-      (src.isF32() && dest.isInteger(64)) ||
-      (src.isF32() && dest.isInteger(1)) ||
+      (src.isF32() && isa<Float8E4M3Type>(dest)) ||
+      (src.isF32() && isa<Float8E5M2Type>(dest)) ||
+      // f16 -> *
+      (src.isF16() && dest.isInteger(32)) ||
+      (src.isF16() && dest.isInteger(16)) ||
+      (src.isF16() && dest.isInteger(8)) ||
+      (src.isF16() && dest.isBF16()) ||
+      (src.isF16() && dest.isF32()) ||
+      (src.isF16() && isa<Float8E4M3Type>(dest)) ||
+      (src.isF16() && isa<Float8E5M2Type>(dest)) ||
       // bf16 -> *
-      (src.isBF16() && dest.isInteger(8)) ||
-      (src.isBF16() && dest.isInteger(16)) ||
       (src.isBF16() && dest.isInteger(32)) ||
-      (src.isBF16() && dest.isF32())) {
+      (src.isBF16() && dest.isInteger(16)) ||
+      (src.isBF16() && dest.isInteger(8)) ||
+      (src.isBF16() && dest.isF32()) ||
+      (src.isBF16() && isa<Float8E4M3Type>(dest)) ||
+      (src.isBF16() && isa<Float8E5M2Type>(dest)) ||
+      // fp8e4m3 -> *
+      (isa<Float8E4M3Type>(src) && dest.isBF16()) ||
+      (isa<Float8E4M3Type>(src) && dest.isF32()) ||
+      (isa<Float8E4M3Type>(src) && dest.isF16()) ||
+      // fp8e5m2 -> *
+      (isa<Float8E5M2Type>(src) && dest.isBF16()) ||
+      (isa<Float8E5M2Type>(src) && dest.isF32()) ||
+      (isa<Float8E5M2Type>(src) && dest.isF16())) {
     return success();
   }
   // clang-format on

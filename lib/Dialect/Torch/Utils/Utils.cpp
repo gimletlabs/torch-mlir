@@ -289,7 +289,9 @@ Value Torch::getConstantWithGivenDtypeAndValue(PatternRewriter &rewriter,
       dtype.isInteger(8) || dtype.isInteger(1))
     return rewriter.create<ConstantIntOp>(
         loc, rewriter.getI64IntegerAttr((int64_t)value));
-  if (dtype.isF64() || dtype.isF32() || dtype.isF16() || dtype.isBF16())
+  if (dtype.isF64() || dtype.isF32() || dtype.isF16() || dtype.isBF16() ||
+      isa<Float8E5M2Type, Float8E4M3FNType, Float8E5M2FNUZType,
+          Float8E4M3FNUZType>(dtype))
     return rewriter.create<ConstantFloatOp>(loc,
                                             rewriter.getF64FloatAttr(value));
   llvm::report_fatal_error(
@@ -639,13 +641,13 @@ Type Torch::getDefaultAccType(PatternRewriter &rewriter, Type inputType) {
     return rewriter.getF32Type();
   if (isa<Float64Type>(inputType))
     return rewriter.getF64Type();
-  if (inputType.isFloat8E5M2())
+  if (isa<Float8E5M2Type>(inputType))
     return rewriter.getF32Type();
-  if (inputType.isFloat8E4M3FN())
+  if (isa<Float8E4M3FNType>(inputType))
     return rewriter.getF32Type();
-  if (inputType.isFloat8E5M2FNUZ())
+  if (isa<Float8E5M2FNUZType>(inputType))
     return rewriter.getF32Type();
-  if (inputType.isFloat8E4M3FNUZ())
+  if (isa<Float8E4M3FNUZType>(inputType))
     return rewriter.getF32Type();
   if (inputType.isInteger(8))
     // this is an intentional deviation from CUDA (which accumulates i8 to i64)
