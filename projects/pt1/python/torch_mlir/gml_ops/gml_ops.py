@@ -56,14 +56,14 @@ _lib.define(
 
 @impl("gml::quantize_affine", "Meta")
 def _quantize_affine_meta(input, block_size, scale, zero_point, output_dtype):
-    # Output has same shape as input but different dtype
-    return torch.empty_like(input, dtype=torch.int8, device="meta")
+    # Output has same shape as input but with output_dtype
+    return torch.empty_like(input, dtype=output_dtype, device="meta")
 
 
 @impl("gml::quantize_affine", "CPU")
 def _quantize_affine_cpu(input, block_size, scale, zero_point, output_dtype):
-    # CPU stub for safety in case CPU is used; maintain shape.
-    return torch.empty_like(input, dtype=torch.int8)
+    # CPU stub for safety in case CPU is used; maintain shape with output_dtype.
+    return torch.empty_like(input, dtype=output_dtype)
 
 
 # Signature:
@@ -80,11 +80,11 @@ _lib.define(
 
 @impl("gml::dequantize_affine", "Meta")
 def _dequantize_affine_meta(input, block_size, scale, zero_point, input_dtype, output_dtype):
-    # Output has same shape as input but fp32/fp16/bf16 dtype
-    return torch.empty_like(input, dtype=torch.float32, device="meta")
+    # Output has same shape as input but with output_dtype (fp32/fp16/bf16)
+    return torch.empty_like(input, dtype=output_dtype, device="meta")
 
 
 @impl("gml::dequantize_affine", "CPU")
 def _dequantize_affine_cpu(input, block_size, scale, zero_point, input_dtype, output_dtype):
-    # CPU stub for safety in case CPU is used; maintain shape.
-    return torch.empty_like(input, dtype=torch.float32)
+    # CPU stub for safety in case CPU is used; maintain shape with output_dtype.
+    return torch.empty_like(input, dtype=output_dtype)
