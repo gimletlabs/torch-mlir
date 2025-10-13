@@ -5934,6 +5934,85 @@ def gml〇fused_moe〡dtype(input_rank_dtype: Tuple[int, int], gate_proj_rank_dt
     return input_dtype
 
 
+GML_QUANTIZE_AFFINE_TESTS = [
+    # Per-tensor quantization
+    Invocation(
+        TensorOfShape(128, 512, dtype=torch.float32),  # input
+        [128, 512],  # block_size (same as input for per-tensor)
+        TensorOfShape(1, dtype=torch.float32),  # scale
+        TensorOfShape(1, dtype=torch.int32),  # zero_point
+        torch.int8,  # output_dtype
+    ),
+    # Per-channel quantization
+    Invocation(
+        TensorOfShape(256, 1024, dtype=torch.float16),  # input
+        [1, 1024],  # block_size (per-channel)
+        TensorOfShape(256, dtype=torch.float32),  # scale
+        TensorOfShape(256, dtype=torch.int32),  # zero_point
+        torch.int8,  # output_dtype
+    ),
+    # Block-wise quantization
+    Invocation(
+        TensorOfShape(1024, 512, dtype=torch.bfloat16),  # input
+        [128, 128],  # block_size
+        TensorOfShape(8, 4, dtype=torch.float32),  # scale (1024/128=8, 512/128=4)
+        TensorOfShape(8, 4, dtype=torch.int32),  # zero_point
+        torch.float8_e4m3fn,  # output_dtype
+    ),
+]
+
+@check_shape_function(GML_QUANTIZE_AFFINE_TESTS)
+def gml〇quantize_affine〡shape(input: List[int], block_size: List[int], scale: List[int], zero_point: List[int], output_dtype: int) -> List[int]:
+    # Quantize output has same shape as input
+    return input
+
+@check_dtype_function(GML_QUANTIZE_AFFINE_TESTS)
+def gml〇quantize_affine〡dtype(input_rank_dtype: Tuple[int, int], block_size: List[int], scale_rank_dtype: Tuple[int, int], zero_point_rank_dtype: Tuple[int, int], output_dtype: int) -> int:
+    # Output dtype is determined by output_dtype parameter
+    return output_dtype
+
+
+GML_DEQUANTIZE_AFFINE_TESTS = [
+    # Per-tensor dequantization
+    Invocation(
+        TensorOfShape(128, 512, dtype=torch.int8),  # input
+        [128, 512],  # block_size (same as input for per-tensor)
+        TensorOfShape(1, dtype=torch.float32),  # scale
+        TensorOfShape(1, dtype=torch.int32),  # zero_point
+        torch.int8,  # input_dtype
+        torch.float32,  # output_dtype
+    ),
+    # Per-channel dequantization
+    Invocation(
+        TensorOfShape(256, 1024, dtype=torch.int8),  # input
+        [1, 1024],  # block_size (per-channel)
+        TensorOfShape(256, dtype=torch.float32),  # scale
+        TensorOfShape(256, dtype=torch.int32),  # zero_point
+        torch.int8,  # input_dtype
+        torch.float16,  # output_dtype
+    ),
+    # Block-wise dequantization
+    Invocation(
+        TensorOfShape(1024, 512, dtype=torch.uint8),  # input
+        [128, 128],  # block_size
+        TensorOfShape(8, 4, dtype=torch.float32),  # scale
+        TensorOfShape(8, 4, dtype=torch.int32),  # zero_point
+        torch.uint8,  # input_dtype
+        torch.bfloat16,  # output_dtype
+    ),
+]
+
+@check_shape_function(GML_DEQUANTIZE_AFFINE_TESTS)
+def gml〇dequantize_affine〡shape(input: List[int], block_size: List[int], scale: List[int], zero_point: List[int], input_dtype: int, output_dtype: int) -> List[int]:
+    # Dequantize output has same shape as input
+    return input
+
+@check_dtype_function(GML_DEQUANTIZE_AFFINE_TESTS)
+def gml〇dequantize_affine〡dtype(input_rank_dtype: Tuple[int, int], block_size: List[int], scale_rank_dtype: Tuple[int, int], zero_point_rank_dtype: Tuple[int, int], input_dtype: int, output_dtype: int) -> int:
+    # Output dtype is determined by output_dtype parameter
+    return output_dtype
+
+
 # ==============================================================================
 # Main
 # ==============================================================================
