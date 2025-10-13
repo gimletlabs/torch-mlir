@@ -17,6 +17,7 @@
 #include "mlir/IR/Matchers.h"
 #include "torch-mlir-dialects/Dialect/TMTensor/IR/TMTensorDialect.h"
 #include "torch-mlir-dialects/Dialect/TMTensor/IR/TMTensorOps.h"
+#include "torch-mlir/Conversion/TorchToLinalg/Utils.h"
 #include "torch-mlir/Conversion/Utils/Utils.h"
 #include "torch-mlir/Dialect/Torch/IR/TorchDialect.h"
 #include "torch-mlir/Dialect/Torch/IR/TorchOps.h"
@@ -1836,6 +1837,40 @@ public:
       return rewriter.create<tensor::CollapseShapeOp>(loc, collapseTy, value,
                                                       reassociation);
     };
+
+    if (!isa<mlir::torch::Torch::NoneType>(mask.getType())) {
+      SmallVector<int64_t> attnWeightShape;
+      // attnWeight is (N, ..., L, S)
+      for (int i = 0; i < valueTy.getRank() - 2; ++i)
+        attnWeightShape.push_back(valueTy.getDimSize(i));
+      // get L from queryTy.
+      attnWeightShape.push_back(queryTy.getDimSize(queryTy.getRank() - 2));
+      // get S from keyTy.
+      attnWeightShape.push_back(keyTy.getDimSize(keyTy.getRank() - 2));
+
+      auto maskTy = cast<ShapedType>(mask.getType());
+      auto broadcastTy = maskTy.clone(attnWeightShape);
+
+      SmallVector<Value> broadcastToShape;
+      SmallVector<bool> useBroadcastToShape;
+      for (int i = 0; i < broadcastTy.getRank(); ++i) {
+        broadcastToShape.push_back(rewriter.create<arith::ConstantOp>(
+            op->getLoc(), rewriter.getI64IntegerAttr(attnWeightShape[i])));
+        useBroadcastToShape.push_back(
+            !ShapedType::isDynamic(attnWeightShape[i]));
+      }
+
+      // Broadcast mask to attnWeightShape.
+      Value broadcasted_mask;
+      if (failed(torch_to_linalg::broadcastToGivenShape(
+              op, rewriter, mask, broadcastToShape,
+              RankedTensorType::get(attnWeightShape, maskTy.getElementType()),
+              broadcasted_mask, useBroadcastToShape))) {
+        op->emitError("failed to broadcast mask to attention weight shape");
+        return failure();
+      }
+      mask = broadcasted_mask;
+    }
 
     query = collapseBatch(query);
     key = collapseBatch(key);
