@@ -357,6 +357,11 @@ MlirType ContextCache::ConvertTensorElementType(int elem_type) {
   case onnx::TensorProto::FLOAT8E5M2FNUZ:
     t = mlirFloat8E5M2FNUZTypeGet(context_);
     break;
+#ifdef onnx_TensorProto_DataType_FLOAT4E2M1
+  case onnx::TensorProto::FLOAT4E2M1:
+    t = mlirFloat4E2M1FNTypeGet(context_);
+    break;
+#endif
   default: {
     std::string msg = "Unknown ONNX tensor element type: ";
     msg.append(std::to_string(elem_type));

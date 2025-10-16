@@ -90,6 +90,8 @@ torch_upstream::ScalarType Torch::getScalarTypeForType(Type type) {
     return torch_upstream::ScalarType::Float8_e5m2fnuz;
   if (isa<Float8E4M3FNUZType>(type))
     return torch_upstream::ScalarType::Float8_e4m3fnuz;
+  if (isa<Float4E2M1FNType>(type))
+    return torch_upstream::ScalarType::Float4_e2m1fn;
   std::string errorMsg = "Unhandled type in getScalarTypeForType: ";
   llvm::raw_string_ostream os(errorMsg);
   type.print(os);
@@ -169,6 +171,8 @@ Torch::getTypeForScalarType(MLIRContext *context,
     return Float8E5M2FNUZType::get(context);
   case torch_upstream::ScalarType::Float8_e4m3fnuz:
     return Float8E4M3FNUZType::get(context);
+  case torch_upstream::ScalarType::Float4_e2m1fn:
+    return Float4E2M1FNType::get(context);
   case torch_upstream::ScalarType::Undefined:
     return failure();
   default:
@@ -289,7 +293,9 @@ Value Torch::getConstantWithGivenDtypeAndValue(PatternRewriter &rewriter,
       dtype.isInteger(8) || dtype.isInteger(1))
     return rewriter.create<ConstantIntOp>(
         loc, rewriter.getI64IntegerAttr((int64_t)value));
-  if (dtype.isF64() || dtype.isF32() || dtype.isF16() || dtype.isBF16())
+  if (dtype.isF64() || dtype.isF32() || dtype.isF16() || dtype.isBF16() ||
+      isa<Float8E5M2Type, Float8E4M3FNType, Float8E5M2FNUZType,
+          Float8E4M3FNUZType, Float4E2M1FNType>(dtype))
     return rewriter.create<ConstantFloatOp>(loc,
                                             rewriter.getF64FloatAttr(value));
   llvm::report_fatal_error(
@@ -646,6 +652,8 @@ Type Torch::getDefaultAccType(PatternRewriter &rewriter, Type inputType) {
   if (inputType.isFloat8E5M2FNUZ())
     return rewriter.getF32Type();
   if (inputType.isFloat8E4M3FNUZ())
+    return rewriter.getF32Type();
+  if (inputType.isFloat4E2M1FN())
     return rewriter.getF32Type();
   if (inputType.isInteger(8))
     // this is an intentional deviation from CUDA (which accumulates i8 to i64)

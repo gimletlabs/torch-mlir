@@ -61,6 +61,12 @@ static inline ScalarType promoteTypes(ScalarType a, ScalarType b) {
   // this matrix has to be consistent with AT_FORALL_SCALAR_TYPES_WITH_COMPLEX
   // so that's why we have to add undefined as we are not sure what is the
   // corrent values for the type promotions in complex type cases.
+  //
+  // NOTE: This table only covers the first 16 scalar types (Byte through BFloat16).
+  // Newer types (Float8_*, Float4_*, QInt16) added after index 16 are not included
+  // in this promotion table. The uninitialized entries default to zero (Byte),
+  // which is incorrect. These newer types should not be used with promoteTypes()
+  // until this table is expanded with proper promotion rules from PyTorch.
   static constexpr ScalarType _promoteTypesLookup[static_cast<int>(
       ScalarType::NumOptions)][static_cast<int>(ScalarType::NumOptions)] = {
       /*        u1  i1  i2  i4  i8  f2  f4  f8  c2  c4  c8  b1  q1  q2  q3  bf*/

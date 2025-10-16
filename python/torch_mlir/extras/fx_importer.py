@@ -109,6 +109,7 @@ from ..ir import (
     FloatAttr,
     BF16Type,
     ComplexType,
+    Float4E2M1FNType,
     Float8E5M2Type,
     Float8E4M3FNType,
     Float8E5M2FNUZType,
@@ -197,6 +198,7 @@ OPTIONAL_TORCH_DTYPE_TO_MLIR_TYPE = {
     "float8_e4m3fn": lambda: Float8E4M3FNType.get(),
     "float8_e5m2fnuz": lambda: Float8E5M2FNUZType.get(),
     "float8_e4m3fnuz": lambda: Float8E4M3FNUZType.get(),
+    "float4_e2m1fn": lambda: Float4E2M1FNType.get(),
 }
 for dtype_str, mlir_type in OPTIONAL_TORCH_DTYPE_TO_MLIR_TYPE.items():
     if hasattr(torch, dtype_str):
