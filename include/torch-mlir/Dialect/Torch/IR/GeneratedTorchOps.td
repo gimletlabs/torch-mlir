@@ -18478,13 +18478,14 @@ def Torch_GmlQuantizeAffineOp : Torch_Op<"gml.quantize_affine", [
     HasValueSemantics,
     ReadOnly
   ]> {
-  let summary = "Generated op for `gml::quantize_affine : (Tensor, int[], Tensor, Tensor, int) -> (Tensor)`";
+  let summary = "Generated op for `gml::quantize_affine : (Tensor, Tensor, Tensor, int, int?, int?) -> (Tensor)`";
   let arguments = (ins
     AnyTorchTensorType:$input,
-    AnyTorchListOfTorchIntType:$block_size,
     AnyTorchTensorType:$scale,
     AnyTorchTensorType:$zero_point,
-    Torch_IntType:$output_dtype
+    Torch_IntType:$output_dtype,
+    AnyTorchOptionalIntType:$axis,
+    AnyTorchOptionalIntType:$block_replication
   );
   let results = (outs
     AnyTorchOptionalTensorType:$result
@@ -18492,10 +18493,10 @@ def Torch_GmlQuantizeAffineOp : Torch_Op<"gml.quantize_affine", [
   let hasCustomAssemblyFormat = 1;
   let extraClassDefinition = [{
     ParseResult GmlQuantizeAffineOp::parse(OpAsmParser &parser, OperationState &result) {
-      return parseDefaultTorchOp(parser, result, 5, 1);
+      return parseDefaultTorchOp(parser, result, 6, 1);
     }
     void GmlQuantizeAffineOp::print(OpAsmPrinter &printer) {
-      printDefaultTorchOp(printer, *this, 5, 1);
+      printDefaultTorchOp(printer, *this, 6, 1);
     }
   }];
 }
@@ -18505,14 +18506,15 @@ def Torch_GmlDequantizeAffineOp : Torch_Op<"gml.dequantize_affine", [
     HasValueSemantics,
     ReadOnly
   ]> {
-  let summary = "Generated op for `gml::dequantize_affine : (Tensor, int[], Tensor, Tensor, int, int) -> (Tensor)`";
+  let summary = "Generated op for `gml::dequantize_affine : (Tensor, Tensor, Tensor, int, int, int?, int?) -> (Tensor)`";
   let arguments = (ins
     AnyTorchTensorType:$input,
-    AnyTorchListOfTorchIntType:$block_size,
     AnyTorchTensorType:$scale,
     AnyTorchTensorType:$zero_point,
     Torch_IntType:$input_dtype,
-    Torch_IntType:$output_dtype
+    Torch_IntType:$output_dtype,
+    AnyTorchOptionalIntType:$axis,
+    AnyTorchOptionalIntType:$block_replication
   );
   let results = (outs
     AnyTorchOptionalTensorType:$result
@@ -18520,10 +18522,10 @@ def Torch_GmlDequantizeAffineOp : Torch_Op<"gml.dequantize_affine", [
   let hasCustomAssemblyFormat = 1;
   let extraClassDefinition = [{
     ParseResult GmlDequantizeAffineOp::parse(OpAsmParser &parser, OperationState &result) {
-      return parseDefaultTorchOp(parser, result, 6, 1);
+      return parseDefaultTorchOp(parser, result, 7, 1);
     }
     void GmlDequantizeAffineOp::print(OpAsmPrinter &printer) {
-      printDefaultTorchOp(printer, *this, 6, 1);
+      printDefaultTorchOp(printer, *this, 7, 1);
     }
   }];
 }

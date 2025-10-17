@@ -1306,9 +1306,11 @@ def emit_ops(emitter_td: TextEmitter, registry: Registry):
     emit(
         "gml::fused_moe : (Tensor, Tensor[], Tensor[], Tensor[], Tensor, Tensor, str) -> (Tensor)"
     )
-    emit("gml::quantize_affine : (Tensor, int[], Tensor, Tensor, int) -> (Tensor)")
     emit(
-        "gml::dequantize_affine : (Tensor, int[], Tensor, Tensor, int, int) -> (Tensor)"
+        "gml::quantize_affine : (Tensor, Tensor, Tensor, int, int?, int?) -> (Tensor)"
+    )
+    emit(
+        "gml::dequantize_affine : (Tensor, Tensor, Tensor, int, int, int?, int?) -> (Tensor)"
     )
 
 

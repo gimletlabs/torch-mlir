@@ -45,50 +45,48 @@ def _fused_moe_cpu(
 
 # Signature:
 # input: Tensor (float32, float16, or bfloat16)
-# block_size: List[int] - granularity of quantization
 # scale: Tensor - quantization scale parameter(s)
 # zero_point: Tensor - quantization zero point parameter(s)
 # output_dtype: int - requested dtype (e.g. torch.uint8)
+# axis: int? - axis along which to quantize (optional)
+# block_replication: int? - number of elements per block (optional)
 _lib.define(
-    "quantize_affine(Tensor input, int[] block_size, Tensor scale, Tensor zero_point, int output_dtype) -> Tensor"
+    "quantize_affine(Tensor input, Tensor scale, Tensor zero_point, int output_dtype, int? axis, int? block_replication) -> Tensor"
 )
 
 
 @impl("gml::quantize_affine", "Meta")
-def _quantize_affine_meta(input, block_size, scale, zero_point, output_dtype):
+def _quantize_affine_meta(input, scale, zero_point, output_dtype, axis, block_replication):
     # Output has same shape as input but with output_dtype
     return torch.empty_like(input, dtype=output_dtype, device="meta")
 
 
 @impl("gml::quantize_affine", "CPU")
-def _quantize_affine_cpu(input, block_size, scale, zero_point, output_dtype):
+def _quantize_affine_cpu(input, scale, zero_point, output_dtype, axis, block_replication):
     # CPU stub for safety in case CPU is used; maintain shape with output_dtype.
     return torch.empty_like(input, dtype=output_dtype)
 
 
 # Signature:
 # input: Tensor (quantized tensor)
-# block_size: List[int] - granularity of quantization
 # scale: Tensor - quantization scale parameter(s)
 # zero_point: Tensor - quantization zero point parameter(s)
 # input_dtype: int - dtype of input tensor
 # output_dtype: int - desired output dtype (default fp32)
+# axis: int? - axis along which to dequantize (optional)
+# block_replication: int? - number of elements per block (optional)
 _lib.define(
-    "dequantize_affine(Tensor input, int[] block_size, Tensor scale, Tensor zero_point, int input_dtype, int output_dtype) -> Tensor"
+    "dequantize_affine(Tensor input, Tensor scale, Tensor zero_point, int input_dtype, int output_dtype, int? axis, int? block_replication) -> Tensor"
 )
 
 
 @impl("gml::dequantize_affine", "Meta")
-def _dequantize_affine_meta(
-    input, block_size, scale, zero_point, input_dtype, output_dtype
-):
+def _dequantize_affine_meta(input, scale, zero_point, input_dtype, output_dtype, axis, block_replication):
     # Output has same shape as input but with output_dtype (fp32/fp16/bf16)
     return torch.empty_like(input, dtype=output_dtype, device="meta")
 
 
 @impl("gml::dequantize_affine", "CPU")
-def _dequantize_affine_cpu(
-    input, block_size, scale, zero_point, input_dtype, output_dtype
-):
+def _dequantize_affine_cpu(input, scale, zero_point, input_dtype, output_dtype, axis, block_replication):
     # CPU stub for safety in case CPU is used; maintain shape with output_dtype.
     return torch.empty_like(input, dtype=output_dtype)
