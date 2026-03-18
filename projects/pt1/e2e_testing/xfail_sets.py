@@ -2938,6 +2938,8 @@ ONNX_XFAIL_SET = {
     "ElementwiseEluNonDefaultModule_basic",
     "ElementwiseExpm1IntModule_basic",
     "ElementwiseExpm1Module_basic",
+    "ElementwiseLogAddExpModule_basic",
+    "ElementwiseLogAddExp2Module_basic",
     "ElementwiseFmodTensor_Int_basic",
     "ElementwiseCreateComplexModule_basic",
     "ElementwiseMulTensorComplexModule_basic",
@@ -3949,6 +3951,8 @@ ONNX_TOSA_CRASHING_SET = {
 }
 
 ONNX_TOSA_XFAIL_SET = {
+    "ElementwiseLogAddExpModule_basic",
+    "ElementwiseLogAddExp2Module_basic",
     "FloatPowerTensorTensorStaticModule_basic",
     "IsInfiniteModule_basic",
     "ElementwiseCopysignModule_basic",
