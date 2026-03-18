@@ -316,7 +316,8 @@ public:
         return signalPassFailure();
     } while (!satisfiesBackendContract(module, target));
     LLVM_DEBUG({
-      llvm::dbgs() << "LowerToBackendContractPass: " << "succeeded after " << i
+      llvm::dbgs() << "LowerToBackendContractPass: "
+                   << "succeeded after " << i
                    << " iterations of the simplification pipeline\n";
     });
   }
@@ -580,6 +581,8 @@ static void markDecomposedOpsAsIllegal(MLIRContext *context,
   target.addIllegalOp<AtenLinalgNormOp>();
   target.addIllegalOp<AtenFminOp>();
   target.addIllegalOp<AtenFmaxOp>();
+  target.addIllegalOp<AtenLogaddexpOp>();
+  target.addIllegalOp<AtenLogaddexp2Op>();
 
   for (auto &opName : backendLegalOpsSet) {
     target.addLegalOp(
