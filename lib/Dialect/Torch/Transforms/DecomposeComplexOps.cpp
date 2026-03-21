@@ -3249,12 +3249,15 @@ public:
     Location loc = op.getLoc();
     Value self = op.getSelf();
     Value other = op.getOther();
+
+    auto selfTy = self.getType();
+    auto otherTy = other.getType();
     auto outTy = op.getType();
 
     Value constantOne =
         ConstantIntOp::create(rewriter, loc, rewriter.getI64IntegerAttr(1));
-    Value expSelf = AtenExpOp::create(rewriter, loc, outTy, self);
-    Value expOther = AtenExpOp::create(rewriter, loc, outTy, other);
+    Value expSelf = AtenExpOp::create(rewriter, loc, selfTy, self);
+    Value expOther = AtenExpOp::create(rewriter, loc, otherTy, other);
     Value addValue = AtenAddTensorOp::create(rewriter, loc, outTy, expSelf,
                                              expOther, constantOne);
     rewriter.replaceOpWithNewOp<AtenLogOp>(op, outTy, addValue);
