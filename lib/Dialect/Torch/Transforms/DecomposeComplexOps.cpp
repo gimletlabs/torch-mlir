@@ -2901,12 +2901,15 @@ public:
     Location loc = op.getLoc();
     Value self = op.getSelf();
     Value other = op.getOther();
+
+    auto selfTy = self.getType();
+    auto otherTy = other.getType();
     auto outTy = op.getType();
 
     Value constantOne =
         rewriter.create<ConstantIntOp>(loc, rewriter.getI64IntegerAttr(1));
-    Value expSelf = rewriter.create<AtenExpOp>(loc, outTy, self);
-    Value expOther = rewriter.create<AtenExpOp>(loc, outTy, other);
+    Value expSelf = rewriter.create<AtenExpOp>(loc, selfTy, self);
+    Value expOther = rewriter.create<AtenExpOp>(loc, otherTy, other);
     Value addValue = rewriter.create<AtenAddTensorOp>(loc, outTy, expSelf,
                                                       expOther, constantOne);
     rewriter.replaceOpWithNewOp<AtenLogOp>(op, outTy, addValue);
