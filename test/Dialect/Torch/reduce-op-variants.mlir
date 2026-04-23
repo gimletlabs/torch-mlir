@@ -188,18 +188,20 @@ func.func @torch.aten.bernoulli_.float(%t: !torch.tensor) -> !torch.tensor {
 // -----
 
 // CHECK-LABEL: func.func @scaled_dot_product_flash_attention_for_cpu
-// CHECK-SAME: %[[ARG0:.+]]: !torch.vtensor<[1,1,5,5],f32>, %[[ARG1:.+]]: !torch.vtensor<[1,1,5,5],f32>, %[[ARG2:.+]]: !torch.vtensor<[1,1,5,5],f32>
+// CHECK-SAME: %[[ARG0:.+]]: !torch.vtensor<[1,2,3,4],f32>, %[[ARG1:.+]]: !torch.vtensor<[1,2,5,4],f32>, %[[ARG2:.+]]: !torch.vtensor<[1,2,5,4],f32>
+// CHECK:      %[[NONE:.+]] = torch.constant.none
 // CHECK:      %[[ZERO:.+]] = torch.constant.float 0.000000e+00
 // CHECK:      %[[FALSE:.+]] = torch.constant.bool false
-// CHECK:      %[[NONE0:.+]] = torch.constant.none
-// CHECK:      %[[NONE1:.+]] = torch.constant.none
-// CHECK:      %[[ATTEN:.+]] = torch.aten.scaled_dot_product_attention %[[ARG0]], %[[ARG1]], %[[ARG2]], %[[NONE0]], %[[ZERO]], %[[FALSE]], %[[NONE1]], %[[FALSE]]
+// CHECK:      %[[SCALE:.+]] = torch.constant.float 0.10000000149011612
+// CHECK:      %[[FALSE2:.+]] = torch.constant.bool false
+// CHECK:      %[[ATTEN:.+]] = torch.aten.scaled_dot_product_attention %[[ARG0]], %[[ARG1]], %[[ARG2]], %[[NONE]], %[[ZERO]], %[[FALSE]], %[[SCALE]], %[[FALSE2]]
 // CHECK:      return %[[ATTEN]]
-func.func @scaled_dot_product_flash_attention_for_cpu(%arg0: !torch.vtensor<[1,1,5,5],f32>, %arg1: !torch.vtensor<[1,1,5,5],f32>, %arg2: !torch.vtensor<[1,1,5,5],f32>) -> !torch.vtensor<[1,1,5,5],f32> {
+func.func @scaled_dot_product_flash_attention_for_cpu(%arg0: !torch.vtensor<[1,2,3,4],f32>, %arg1: !torch.vtensor<[1,2,5,4],f32>, %arg2: !torch.vtensor<[1,2,5,4],f32>) -> !torch.vtensor<[1,2,3,4],f32> {
+  %none = torch.constant.none
   %float0.000000e00 = torch.constant.float 0.000000e+00
   %false = torch.constant.bool false
-  %none = torch.constant.none
-  %none_0 = torch.constant.none
-  %0:2 = torch.operator "torch.aten._scaled_dot_product_flash_attention_for_cpu"(%arg0, %arg1, %arg2, %float0.000000e00, %false, %none, %none_0) : (!torch.vtensor<[1,1,5,5],f32>, !torch.vtensor<[1,1,5,5],f32>, !torch.vtensor<[1,1,5,5],f32>, !torch.float, !torch.bool, !torch.none, !torch.none) -> (!torch.vtensor<[1,1,5,5],f32>, !torch.vtensor<[1,1,5],f32>)
-  return %0#0 : !torch.vtensor<[1,1,5,5],f32>
+  %float1.000000e-01 = torch.constant.float 0.10000000149011612
+  %0:2 = torch.operator "torch.aten._scaled_dot_product_attention_math"(%arg0, %arg1, %arg2, %none, %float0.000000e00, %false, %none, %float1.000000e-01, %false) : (!torch.vtensor<[1,2,3,4],f32>, !torch.vtensor<[1,2,5,4],f32>, !torch.vtensor<[1,2,5,4],f32>, !torch.none, !torch.float, !torch.bool, !torch.none, !torch.float, !torch.bool) -> (!torch.vtensor<[1,2,3,4],f32>, !torch.vtensor<[1,2,3,5],f32>)
+  return %0#0 : !torch.vtensor<[1,2,3,4],f32>
 }
+

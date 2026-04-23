@@ -11,6 +11,7 @@ add_mlir_library(TorchMLIRTorchPasses
   MatchQuantizedOps.cpp
   MaximizeValueSemantics.cpp
   PrepareForGlobalizeObjectGraph.cpp
+  RaiseIfOpShapesDtypes.cpp
   RecomposeComplexOps.cpp
   ReduceOpVariants.cpp
   RefinePublicReturn.cpp

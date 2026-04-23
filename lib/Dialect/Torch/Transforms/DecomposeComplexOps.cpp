@@ -12190,7 +12190,7 @@ createIndexTensorsFromBoolMask(Operation *op, PatternRewriter &rewriter,
   auto rank = type.getSizes().size();
 
   auto indicesResultType = ValueTensorType::get(
-      op->getContext(), ArrayRef<int64_t>{-1, rank},
+      op->getContext(), ArrayRef<int64_t>{-1, static_cast<long>(rank)},
       rewriter.getIntegerType(/*width=*/64, /*isSigned=*/true));
   auto indices =
       rewriter.create<Torch::AtenNonzeroOp>(loc, indicesResultType, tensor);
