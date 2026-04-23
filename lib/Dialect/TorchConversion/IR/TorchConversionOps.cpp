@@ -56,7 +56,9 @@ LogicalResult ToBuiltinTensorOp::verify() {
 }
 
 OpFoldResult ToBuiltinTensorOp::fold(FoldAdaptor adaptor) {
-  return dyn_cast_or_null<ElementsAttr>(adaptor.getOperand());
+  // Disabled: Don't fold arith.constant into torch.vtensor.literal
+  // to preserve the original IR structure.
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -75,7 +77,9 @@ LogicalResult FromBuiltinTensorOp::verify() {
 }
 
 OpFoldResult FromBuiltinTensorOp::fold(FoldAdaptor adaptor) {
-  return dyn_cast_or_null<ElementsAttr>(adaptor.getOperand());
+  // Disabled: Don't fold arith.constant into torch.vtensor.literal
+  // to preserve the original IR structure.
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
